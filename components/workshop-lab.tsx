@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,12 +10,9 @@ import {
   ChevronDown,
   CircleAlert,
   Clock3,
-  Download,
   Eye,
-  FileCheck2,
   LockKeyhole,
   PackageCheck,
-  Printer,
   RefreshCcw,
   ShieldCheck,
   Sparkles,
@@ -27,13 +25,17 @@ import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
 import { MATERIAL_OPTIONS } from "@/server/domain/fixtures";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
-type View = "configure" | "generating" | "result" | "review" | "changes_requested" | "approved";
+type View = "configure" | "generating" | "result";
 
 export function WorkshopLab() {
+  const router = useRouter();
   const [view, setView] = useState<View>("configure");
   const [profile, setProfile] = useState<ResourceProfile>(DEFAULT_PROFILE);
   const [plan, setPlan] = useState<WorkshopPlan | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [activeStage, setActiveStage] = useState(0);
   const profileFindings = validateProfile(profile);
   const profileBlocked = profileFindings.some((finding) => finding.severity === "blocker");
@@ -68,10 +70,30 @@ export function WorkshopLab() {
         throw new Error("error" in body ? body.error : "Atölye üretilemedi.");
       }
       setPlan(body);
+      setIdempotencyKey(crypto.randomUUID());
       setView("result");
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : "Atölye üretilemedi.");
       setView("configure");
+    }
+  }
+
+  async function saveDraft() {
+    if (!plan || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const response = await fetch("/api/workshops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify(plan.profile),
+      });
+      const body = (await response.json()) as { id?: string; error?: string };
+      if (!response.ok || !body.id) throw new Error(body.error ?? "Taslak kaydedilemedi.");
+      router.push(`/workshops/${body.id}?created=1`);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Taslak kaydedilemedi.");
+      setSaving(false);
     }
   }
 
@@ -109,8 +131,8 @@ export function WorkshopLab() {
               </div>
               {profileBlocked && <div className="field-error" role="alert"><CircleAlert /> {profileFindings.map((finding) => finding.message).join(" ")}</div>}
               <div className="toggle-row">
-                <button className={!profile.hasElectricity ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasElectricity", !profile.hasElectricity)} type="button"><ZapOff /><span><strong>Elektrik</strong><small>{profile.hasElectricity ? "Var" : "Yok"}</small></span><i>{!profile.hasElectricity && <Check />}</i></button>
-                <button className={!profile.hasInternet ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasInternet", !profile.hasInternet)} type="button"><WifiOff /><span><strong>İnternet</strong><small>{profile.hasInternet ? "Var" : "Yok"}</small></span><i>{!profile.hasInternet && <Check />}</i></button>
+                <button data-testid="toggle-electricity" aria-label="Elektrik kullanımı" aria-pressed={profile.hasElectricity} className={!profile.hasElectricity ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasElectricity", !profile.hasElectricity)} type="button"><ZapOff /><span><strong>Elektrik</strong><small>{profile.hasElectricity ? "Var" : "Yok"}</small></span><i>{!profile.hasElectricity && <Check />}</i></button>
+                <button data-testid="toggle-internet" aria-label="İnternet kullanımı" aria-pressed={profile.hasInternet} className={!profile.hasInternet ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasInternet", !profile.hasInternet)} type="button"><WifiOff /><span><strong>İnternet</strong><small>{profile.hasInternet ? "Var" : "Yok"}</small></span><i>{!profile.hasInternet && <Check />}</i></button>
               </div>
               <div className="budget-row">
                 <label><span>Toplam bütçe</span><div className="input-affix"><input type="number" min="0" value={profile.budgetTry} onChange={(event) => update("budgetTry", Number(event.target.value))} /><b>₺</b></div></label>
@@ -123,7 +145,7 @@ export function WorkshopLab() {
               <p className="panel-help">Sınıfta gerçekten bulunanları seçin. Sistem yalnızca bunları veya onaylı alternatiflerini kullanır.</p>
               <div className="material-grid">
                 {MATERIAL_OPTIONS.map((material) => (
-                  <button key={material.key} type="button" className={profile.materials.includes(material.key) ? "material selected" : "material"} onClick={() => toggleMaterial(material.key)}>
+                  <button key={material.key} data-testid={`material-${material.key}`} aria-pressed={profile.materials.includes(material.key)} type="button" className={profile.materials.includes(material.key) ? "material selected" : "material"} onClick={() => toggleMaterial(material.key)}>
                     <i>{profile.materials.includes(material.key) && <Check size={13} />}</i>{material.label}
                   </button>
                 ))}
@@ -141,7 +163,7 @@ export function WorkshopLab() {
               <div><dt><PackageCheck /> Malzeme</dt><dd>{profile.materials.length} çeşit</dd></div>
             </dl>
             <div className="safety-note"><ShieldCheck /><div><strong>Güvenlik filtresi açık</strong><p>Yalnızca yaşa ve koşullara uygun, önceden onaylı etkinlik şablonları kullanılacak.</p></div></div>
-            <button className="button primary wide" type="button" disabled={profileBlocked} onClick={createPlan}>Atölyeyi üret <Sparkles size={18} /></button>
+            <button data-testid="generate-submit" className="button primary wide" type="button" disabled={profileBlocked} onClick={createPlan}>Atölyeyi üret <Sparkles size={18} /></button>
             <p className="microcopy">Kazanım metni üretim sırasında değiştirilemez.</p>
           </aside>
         </div>
@@ -152,13 +174,13 @@ export function WorkshopLab() {
   if (!plan) {
     return null;
   }
-  return <ResultView plan={plan} activeStage={activeStage} setActiveStage={setActiveStage} view={view} setView={setView} />;
+  return <ResultView plan={plan} activeStage={activeStage} setActiveStage={setActiveStage} setView={setView} onSave={saveDraft} saving={saving} saveError={saveError} />;
 }
 
 function GeneratingView() {
   const steps = ["Kazanım sürümü kilitlendi", "Uyumsuz şablonlar elendi", "5E akışı dengelendi", "Güvenlik ve bütçe doğrulanıyor"];
   return (
-    <section className="generation-screen">
+    <section className="generation-screen" data-testid="generating-indicator" aria-live="polite">
       <div className="generator-orb"><Sparkles /><span className="orbit orbit-one" /><span className="orbit orbit-two" /></div>
       <span className="overline">REPLAY üretim motoru</span>
       <h1>Atölye gerçek koşullara uyarlanıyor…</h1>
@@ -168,11 +190,8 @@ function GeneratingView() {
   );
 }
 
-function ResultView({ plan, activeStage, setActiveStage, view, setView }: { plan: WorkshopPlan; activeStage: number; setActiveStage: (value: number) => void; view: View; setView: (value: View) => void }) {
+function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving, saveError }: { plan: WorkshopPlan; activeStage: number; setActiveStage: (value: number) => void; setView: (value: View) => void; onSave: () => void; saving: boolean; saveError: string | null }) {
   const blockers = useMemo(() => plan.findings.filter((finding) => finding.severity === "blocker"), [plan]);
-  const approved = view === "approved";
-  const inReview = view === "review";
-  const changesRequested = view === "changes_requested";
   const stage = plan.stages[activeStage];
   const coveredStages = plan.stages.filter((item) => item.objectiveConnection.trim().length > 0).length;
   const safetyBlocked = plan.findings.some((finding) =>
@@ -180,26 +199,22 @@ function ResultView({ plan, activeStage, setActiveStage, view, setView }: { plan
   );
 
   return (
-    <section className={`page result-page ${approved ? "print-package" : ""}`}>
+    <section className="page result-page" data-testid="plan-root">
       <div className="result-header no-print">
         <button className="back-link" onClick={() => setView("configure")}><ArrowLeft /> Koşulları düzenle</button>
         <div className="result-actions">
           <span className="mode-badge"><span /> {plan.mode}</span>
-          {approved && <button className="button ghost" onClick={() => window.print()}><Printer size={17} /> Yazdır</button>}
-          {!approved && !inReview && <button className="button primary" disabled={blockers.length > 0} onClick={() => setView("review")}>İncelemeye gönder <ArrowRight size={17} /></button>}
+          <button data-testid="save-draft" className="button primary" disabled={blockers.length > 0 || saving} onClick={onSave}>{saving ? "Kaydediliyor…" : "Taslağı kaydet"} <ArrowRight size={17} /></button>
         </div>
       </div>
-
-      {approved && <div className="approval-banner"><CheckCircle2 /><div><strong>Pedagojik olarak onaylandı</strong><span>Sürüm 1.0 · Kullanıma ve yazdırmaya hazır</span></div><FileCheck2 /></div>}
-      {inReview && <ReviewBanner onApprove={() => setView("approved")} onRequestChanges={() => setView("changes_requested")} />}
-      {changesRequested && <section className="change-banner no-print"><CircleAlert /><div><strong>Değişiklik istendi</strong><span>Taslak içerik uzmanına geri gönderildi; onaylı paket henüz yayımlanmadı.</span></div><button className="button ghost" onClick={() => setView("configure")}>Koşulları düzenle</button></section>}
+      {saveError && <div className="error-notice" role="alert"><CircleAlert /> {saveError}</div>}
 
       <header className="plan-title">
         <div><span className="overline">Fen bilimleri · 7. sınıf · 5E</span><h1>{plan.title}</h1><p>{plan.adaptationSummary}</p></div>
         <div className="plan-metrics"><div><Clock3 /><strong>{plan.profile.durationMinutes}</strong><span>dakika</span></div><div><Users /><strong>{plan.profile.classSize}</strong><span>öğrenci</span></div><div><WalletCards /><strong>{plan.estimatedCostTry} ₺</strong><span>tahmini</span></div></div>
       </header>
 
-      <section className="objective-lock-card">
+      <section className="objective-lock-card" data-testid="objective-lock">
         <div className="lock-symbol"><LockKeyhole /></div>
         <div><span className="overline">Kazanım Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div>
         <span className="verified"><ShieldCheck /> Doğrulandı</span>
@@ -210,7 +225,7 @@ function ResultView({ plan, activeStage, setActiveStage, view, setView }: { plan
           <div className="stage-tabs no-print" role="tablist">
             {plan.stages.map((item, index) => <button role="tab" aria-selected={index === activeStage} className={index === activeStage ? "active" : ""} onClick={() => setActiveStage(index)} key={item.key}><span>{index + 1}</span>{item.shortName}<small>{item.minutes} dk</small></button>)}
           </div>
-          <article className="stage-detail">
+          <article className="stage-detail" role="tabpanel" data-testid={`stage-detail-${stage.key}`}>
             <div className="stage-heading"><div><span className="stage-number">0{activeStage + 1}</span><span className="overline">{stage.name}</span><h2>{stage.title}</h2></div><span className="time-pill"><Clock3 /> {stage.minutes} dk</span></div>
             <div className="instruction-grid"><div><span className="tiny-heading">Öğretmen ne yapar?</span><p>{stage.teacherAction}</p></div><div><span className="tiny-heading">Öğrenci ne yapar?</span><p>{stage.studentAction}</p></div></div>
             <div className="evidence-box"><Eye /><div><strong>Beklenen öğrenme kanıtı</strong><p>{stage.evidence}</p></div></div>
@@ -229,21 +244,11 @@ function ResultView({ plan, activeStage, setActiveStage, view, setView }: { plan
             <div><CheckCircle2 /><span><strong>Grup kapasitesi</strong><small>{plan.groupCount} grup planlandı</small></span></div>
             <div>{safetyBlocked ? <CircleAlert /> : <CheckCircle2 />}<span><strong>Güvenlik sınırları</strong><small>{safetyBlocked ? "İnceleme gerekli" : "İhlal yok"}</small></span></div>
           </div>
-          {plan.findings.map((finding, index) => <div className={`finding ${finding.severity}`} key={`${finding.code}-${index}`}>{finding.severity === "warning" || finding.severity === "blocker" ? <CircleAlert /> : <Sparkles />}<div><strong>{finding.code.replaceAll("_", " ")}</strong><p>{finding.message}</p></div></div>)}
+          {plan.findings.map((finding, index) => <div data-testid="finding" data-code={finding.code} data-severity={finding.severity} className={`finding ${finding.severity}`} key={`${finding.code}-${index}`}>{finding.severity === "warning" || finding.severity === "blocker" ? <CircleAlert /> : <Sparkles />}<div><strong>{finding.code.replaceAll("_", " ")}</strong><p>{finding.message}</p></div></div>)}
           <details><summary>Doğrulama kaydı <ChevronDown /></summary><code>OBJECTIVE_COVERAGE: {coveredStages === plan.stages.length ? "PASS" : "BLOCK"}<br />DURATION_TOTAL: {plan.stages.reduce((sum, item) => sum + item.minutes, 0) === plan.profile.durationMinutes ? "PASS" : "BLOCK"}<br />SAFETY_BOUNDS: {safetyBlocked ? "BLOCK" : "PASS"}<br />INVENTORY: {plan.findings.some((finding) => finding.code === "APPROVED_SUBSTITUTION_APPLIED") ? "ADAPTED" : "PASS"}</code></details>
         </aside>
       </div>
 
-      {approved && <section className="print-footer"><div><strong>İMKÂN</strong><span>Kazanım sabit. Atölye uyarlanabilir.</span></div><button className="button primary no-print" onClick={() => window.print()}><Download size={17} /> Paketi yazdır</button></section>}
-    </section>
-  );
-}
-
-function ReviewBanner({ onApprove, onRequestChanges }: { onApprove: () => void; onRequestChanges: () => void }) {
-  return (
-    <section className="review-banner no-print">
-      <div><span className="overline">Pedagog incelemesi</span><h2>Kazanım–etkinlik zincirini doğrulayın</h2><p>Onayınız bu sürümü değişmez kılar ve eğitimci görünümüne açar.</p></div>
-      <div className="review-actions"><button className="button ghost" onClick={onRequestChanges}>Değişiklik iste</button><button className="button primary" onClick={onApprove}><Check size={17} /> Sürümü onayla</button></div>
     </section>
   );
 }

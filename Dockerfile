@@ -10,6 +10,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
+# One-off image for an ECS migration task. It is intentionally not the public
+# web image and should never receive inbound traffic.
+FROM deps AS migration
+WORKDIR /app
+COPY . .
+CMD ["npm", "run", "db:migrate"]
+
 FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production

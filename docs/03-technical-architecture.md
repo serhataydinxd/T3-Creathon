@@ -23,12 +23,12 @@ Next.js web/PWA
 | Layer | Decision |
 |---|---|
 | Frontend | Current-stable Next.js App Router, React and TypeScript |
-| Styling | Tailwind CSS and a minimal component library |
+| Styling | Repository-owned responsive CSS and accessible React components |
 | Backend | Next.js route handlers plus pure TypeScript domain modules |
 | Database | PostgreSQL |
 | ORM | Drizzle with committed SQL migrations |
 | Static validation | Zod |
-| Dynamic template validation | JSON Schema with Ajv |
+| Dynamic template validation | Zod in P0; JSON Schema/Ajv when authored templates become dynamic |
 | Authentication | Database-backed sessions and Argon2id password hashes |
 | AI | One P0 provider behind a small `LLMProvider` interface |
 | Work queue | PostgreSQL rows claimed with leases |
@@ -208,4 +208,3 @@ is complete.
   newer version or decision.
 - Objective and template versions are pinned once at run creation.
 - Demo mode is selected once per run and cannot switch mid-run.
-

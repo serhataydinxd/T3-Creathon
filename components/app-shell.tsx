@@ -4,18 +4,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, CircleHelp, FlaskConical, LayoutDashboard, LockKeyhole } from "lucide-react";
 import { Brand } from "./brand";
+import { logoutAction } from "@/app/actions/auth";
+import type { AuthUser } from "@/server/auth/session";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+const roleLabels: Record<AuthUser["role"], string> = {
+  content_expert: "İçerik uzmanı",
+  pedagogue: "Pedagog",
+  educator: "Eğitimci",
+  manager: "Yönetici",
+};
+
+export function AppShell({ children, user }: { children: React.ReactNode; user?: AuthUser | null }) {
   const pathname = usePathname();
   return (
     <div className="app-frame">
+      <a className="skip-link" href="#main-content">Ana içeriğe geç</a>
       <aside className="sidebar">
         <Brand />
         <nav aria-label="Ana menü" className="side-nav">
-          <Link className={`nav-item ${pathname === "/" ? "active" : ""}`} href="/">
+          <Link className={`nav-item ${pathname === "/dashboard" ? "active" : ""}`} href={user ? "/dashboard" : "/"}>
             <LayoutDashboard size={18} /> Genel bakış
           </Link>
-          <Link className={`nav-item ${pathname === "/lab" ? "active" : ""}`} href="/lab">
+          <Link className={`nav-item ${pathname === "/lab" ? "active" : ""}`} href={user ? "/lab" : "/login"}>
             <FlaskConical size={18} /> Atölye laboratuvarı
           </Link>
           <Link className="nav-item" href="/#kazanım-kilidi">
@@ -41,12 +51,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="demo-status">
             <span className="pulse-dot" /> Güvenli demo ortamı
           </div>
-          <div className="user-pill">
-            <span className="avatar">SA</span>
-            <span><strong>Selin Aksoy</strong><small>İçerik uzmanı</small></span>
-          </div>
+          {user ? (
+            <div className="user-area">
+              <div className="user-pill">
+                <span className="avatar">{user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
+                <span><strong>{user.name}</strong><small>{roleLabels[user.role]}</small></span>
+              </div>
+              <form action={logoutAction}><button className="logout-button" type="submit">Çıkış</button></form>
+            </div>
+          ) : (
+            <Link className="button primary" href="/login">Giriş yap</Link>
+          )}
         </header>
-        <main>{children}</main>
+        <main id="main-content">{children}</main>
       </div>
     </div>
   );

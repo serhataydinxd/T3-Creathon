@@ -26,16 +26,24 @@ The repository now contains a runnable public-demo vertical slice:
 - Pedagogical approve/change-request transition
 - Educator print package with teacher and student instructions
 - PostgreSQL/Drizzle schema foundation, Docker image and AWS deployment notes
+- Pending-account registration with manager role activation
+- Argon2id passwords and revocable, database-backed opaque sessions
+- Persistent draft → review → approval → publication → feedback workflow
+- Immutable revision history and audited status transitions
+- Production-browser Playwright and axe accessibility coverage
 
-Replay mode is intentionally deterministic and works without credentials. It
-does not claim to be the final live-model or persistence implementation.
+Replay generation is intentionally deterministic and needs no model-provider
+credential. Accounts, reviews, publication and feedback are persisted; the live
+LLM provider remains a later phase.
 
 ## Run locally
 
-Requirements: Node.js 22 or newer.
+Requirements: Node.js 24 or newer.
 
 ```bash
 npm install
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
@@ -49,12 +57,30 @@ Run the full verification suite with:
 npm run check
 ```
 
+The repository can run browser tests without Docker by using embedded PGlite,
+which executes the same committed PostgreSQL migrations:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Seeded local accounts use `I.mkanDemo!2026` unless `DEMO_PASSWORD` is set:
+
+- `content@imkan.test`
+- `pedagogue@imkan.test`
+- `educator@imkan.test`
+- `manager@imkan.test`
+
+Publicly registered accounts remain pending and receive no role or session
+until a manager activates them.
+
 ## Public deployment
 
-The replay image can be deployed to AWS App Runner without a database or model
-secret. Once the persistent web + worker topology is enabled, use separate ECS
-Fargate services backed by private Amazon RDS PostgreSQL. See the
-[deployment guide](docs/07-deployment.md).
+Deploy the account-enabled replay application to ECS Fargate backed by private
+Amazon RDS PostgreSQL. Replay mode requires no model-provider secret. A second
+private Fargate service can run the worker when live generation is enabled. See
+the [deployment guide](docs/07-deployment.md).
 
 Do not put secrets, student data or real user data in the public demo. Copy
 `.env.example` to `.env.local` only for local development; `.env*` files are

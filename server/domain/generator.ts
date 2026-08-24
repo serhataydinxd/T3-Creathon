@@ -173,7 +173,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
   }
 
   return {
-    id: crypto.randomUUID(),
+    id: "replay-electric-circuit-v1",
     mode: "REPLAY",
     title: "Elektrik Devreleri: Aynı Kazanım, Gerçek İmkânlar",
     objective: { ...DEMO_OBJECTIVE, locked: true },
@@ -185,7 +185,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
       : "Devre seti ve enerji gerektirmeyen kâğıt tabanlı model; aynı şema kazanımını koruyacak biçimde seçildi.",
     stages,
     findings,
-    generatedAt: new Date().toISOString(),
+    generatedAt: "2026-08-24T12:00:00.000Z",
   };
 }
 

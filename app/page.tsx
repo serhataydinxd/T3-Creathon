@@ -38,15 +38,15 @@ export default function Home() {
         </div>
 
         <div className="stats-strip">
-          <div><span className="stat-icon mint"><CheckCircle2 /></span><strong>12</strong><small>Onaylı kazanım</small></div>
-          <div><span className="stat-icon amber"><Sparkles /></span><strong>8</strong><small>Güvenli etkinlik</small></div>
-          <div><span className="stat-icon blue"><Clock3 /></span><strong>4</strong><small>İnceleme bekliyor</small></div>
+          <div><span className="stat-icon mint"><CheckCircle2 /></span><strong>1</strong><small>Onaylı demo kazanımı</small></div>
+          <div><span className="stat-icon amber"><Sparkles /></span><strong>2</strong><small>Gerçek kaynak rotası</small></div>
+          <div><span className="stat-icon blue"><Clock3 /></span><strong>5</strong><small>İzlenebilir 5E aşaması</small></div>
           <div><span className="stat-icon coral"><TriangleAlert /></span><strong>0</strong><small>Güvenlik ihlali</small></div>
         </div>
 
         <section className="content-section" id="nasil-calisir">
           <div className="section-heading">
-            <div><span className="overline">Son çalışmalar</span><h2>Atölye paketleri</h2></div>
+            <div><span className="overline">Demo kapsamı</span><h2>Örnek atölye senaryoları</h2></div>
             <Link href="/lab">Tümünü gör <ArrowRight size={15} /></Link>
           </div>
           <div className="workshop-list">

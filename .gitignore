@@ -7,6 +7,9 @@ out/
 
 # Tests and tooling
 coverage/
+playwright-report/
+test-results/
+.auth/
 *.tsbuildinfo
 next-env.d.ts
 
@@ -24,6 +27,7 @@ next-env.d.ts
 *.db
 *.sqlite
 exports/
+.data/
 
 # Local source document; publish only after redistribution permission.
 T3 Vakfı Bursiyer Yapay Zeka Creathon Problemler Kitapçığı.pdf
