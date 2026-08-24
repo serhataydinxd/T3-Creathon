@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Tests and tooling
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs and OS files
+*.log
+.DS_Store
+
+# Local databases and generated exports
+*.db
+*.sqlite
+exports/
+
+# Local source document; publish only after redistribution permission.
+T3 Vakfı Bursiyer Yapay Zeka Creathon Problemler Kitapçığı.pdf

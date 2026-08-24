@@ -1,0 +1,60 @@
+export type MaterialKey =
+  | "paper"
+  | "pencil"
+  | "scissors"
+  | "tape"
+  | "battery"
+  | "led"
+  | "copper-wire"
+  | "projector";
+
+export type ResourceProfile = {
+  durationMinutes: 40 | 60 | 80;
+  classSize: number;
+  groupSize: number;
+  budgetTry: number;
+  hardBudget: boolean;
+  hasInternet: boolean;
+  hasElectricity: boolean;
+  materials: MaterialKey[];
+  accessibilityNeeds: string[];
+};
+
+export type Finding = {
+  code: string;
+  severity: "blocker" | "warning" | "info";
+  message: string;
+};
+
+export type Stage = {
+  key: "engage" | "explore" | "explain" | "elaborate" | "evaluate";
+  name: string;
+  shortName: string;
+  minutes: number;
+  title: string;
+  teacherAction: string;
+  studentAction: string;
+  evidence: string;
+  materialKeys: MaterialKey[];
+  objectiveConnection: string;
+};
+
+export type WorkshopPlan = {
+  id: string;
+  mode: "REPLAY";
+  title: string;
+  objective: {
+    id: string;
+    code: string;
+    canonicalText: string;
+    source: string;
+    locked: true;
+  };
+  profile: ResourceProfile;
+  groupCount: number;
+  estimatedCostTry: number;
+  adaptationSummary: string;
+  stages: Stage[];
+  findings: Finding[];
+  generatedAt: string;
+};
