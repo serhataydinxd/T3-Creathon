@@ -47,3 +47,18 @@ first process stalled without returning a verdict and the replacement could not
 start because the Claude account reached its session limit. Codex completed the
 release review and the full automated verification suite; no Claude-generated
 edits were accepted or applied.
+
+## Production implementation consultation
+
+On 25 August 2026, Codex attempted a new Claude architecture review in the
+required read-only plan mode. The CLI again stalled without returning a result
+and was stopped without edits. Three DeepSeek V4 Flash coding subagents were then
+run through the user-provided B.AI gateway for bounded infrastructure, release
+and bootstrap tasks, followed by two focused code-review agents.
+
+Codex adopted the useful concrete findings: bounded migration execution,
+explicit deploy-role validation, production migration runtime settings and RDS
+Boolean normalization. Codex rejected suggestions that contradicted AWS's
+documented ECS secret ARN and Secrets Manager dynamic-reference syntax. All
+integrated code remained Codex-reviewed and repository tests remained the final
+acceptance authority.

@@ -15,7 +15,10 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:release": "npm run db:migrate && npm run db:seed-objective",
     "db:seed": "tsx scripts/seed.ts",
+    "db:seed-objective": "tsx scripts/seed-objective.ts",
+    "db:bootstrap-manager": "tsx scripts/bootstrap-manager.ts",
     "db:test:reset": "tsx scripts/reset-test-db.ts",
     "check": "npm run lint && npm test && npm run build",
     "check:all": "npm run check && npm run test:e2e"

@@ -1,0 +1,82 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Ephemeral one-off task definition for the first İMKÂN manager.",
+  "Parameters": {
+    "EnvironmentName": {
+      "Type": "String",
+      "Default": "imkan-staging",
+      "AllowedPattern": "[a-z][a-z0-9-]{2,30}"
+    },
+    "MigrationImageTag": {
+      "Type": "String",
+      "AllowedPattern": "migration-[a-f0-9]{7,64}"
+    },
+    "BootstrapSecretArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:.+",
+      "NoEcho": true
+    }
+  },
+  "Resources": {
+    "BootstrapTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Cpu": "256",
+        "ExecutionRoleArn": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-TaskExecutionRoleArn" } },
+        "Family": { "Fn::Sub": "${EnvironmentName}-bootstrap-manager" },
+        "Memory": "512",
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": ["FARGATE"],
+        "RuntimePlatform": { "CpuArchitecture": "X86_64", "OperatingSystemFamily": "LINUX" },
+        "TaskRoleArn": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-TaskRoleArn" } },
+        "ContainerDefinitions": [{
+          "Name": "bootstrap-manager",
+          "Essential": true,
+          "Command": ["npm", "run", "db:bootstrap-manager"],
+          "Image": {
+            "Fn::Sub": [
+              "${RepositoryUri}:${MigrationImageTag}",
+              { "RepositoryUri": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-MigrationRepositoryUri" } } }
+            ]
+          },
+          "Environment": [
+            { "Name": "DATABASE_SSL", "Value": "true" },
+            { "Name": "DB_HOST", "Value": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseEndpoint" } } },
+            { "Name": "DB_NAME", "Value": "imkan" },
+            { "Name": "DB_PORT", "Value": "5432" },
+            { "Name": "NODE_ENV", "Value": "production" }
+          ],
+          "Secrets": [
+            { "Name": "DB_USER", "ValueFrom": { "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "username", "", ""]] } },
+            { "Name": "DB_PASSWORD", "ValueFrom": { "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "password", "", ""]] } },
+            { "Name": "BOOTSTRAP_MANAGER_EMAIL", "ValueFrom": { "Fn::Join": [":", [{ "Ref": "BootstrapSecretArn" }, "email", "", ""]] } },
+            { "Name": "BOOTSTRAP_MANAGER_NAME", "ValueFrom": { "Fn::Join": [":", [{ "Ref": "BootstrapSecretArn" }, "name", "", ""]] } },
+            { "Name": "BOOTSTRAP_MANAGER_PASSWORD", "ValueFrom": { "Fn::Join": [":", [{ "Ref": "BootstrapSecretArn" }, "password", "", ""]] } }
+          ],
+          "LogConfiguration": {
+            "LogDriver": "awslogs",
+            "Options": {
+              "awslogs-group": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-MigrationLogGroup" } },
+              "awslogs-region": { "Ref": "AWS::Region" },
+              "awslogs-stream-prefix": "bootstrap-manager"
+            }
+          }
+        }]
+      }
+    },
+    "BootstrapSecretReadPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": { "Fn::Sub": "${EnvironmentName}-read-bootstrap-secret" },
+        "Roles": [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-TaskExecutionRoleName" } }],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{ "Effect": "Allow", "Action": "secretsmanager:GetSecretValue", "Resource": { "Ref": "BootstrapSecretArn" } }]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BootstrapTaskDefinitionArn": { "Value": { "Ref": "BootstrapTaskDefinition" } }
+  }
+}

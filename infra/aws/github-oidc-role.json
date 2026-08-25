@@ -1,0 +1,149 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "One-time bootstrap for İMKÂN GitHub Actions OIDC deployment roles.",
+  "Parameters": {
+    "GitHubSubject": {
+      "Type": "String",
+      "AllowedPattern": "repo:.+:environment:.+",
+      "Description": "Exact GitHub OIDC sub claim, including immutable owner/repository IDs when enabled."
+    },
+    "EnvironmentName": { "Type": "String", "Default": "imkan-staging", "AllowedPattern": "[a-z][a-z0-9-]{2,30}" },
+    "ExistingGitHubOidcProviderArn": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Provide the existing token.actions.githubusercontent.com provider ARN, or leave empty to create it."
+    }
+  },
+  "Conditions": {
+    "CreateGitHubOidcProvider": { "Fn::Equals": [{ "Ref": "ExistingGitHubOidcProviderArn" }, ""] }
+  },
+  "Resources": {
+    "GitHubOidcProvider": {
+      "Type": "AWS::IAM::OIDCProvider",
+      "Condition": "CreateGitHubOidcProvider",
+      "Properties": {
+        "ClientIdList": ["sts.amazonaws.com"],
+        "Url": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "CloudFormationExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/imkan/",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{ "Effect": "Allow", "Principal": { "Service": "cloudformation.amazonaws.com" }, "Action": "sts:AssumeRole" }]
+        },
+        "ManagedPolicyArns": ["arn:aws:iam::aws:policy/PowerUserAccess"],
+        "Policies": [{
+          "PolicyName": "ManageImkanTaskRoles",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": [
+                "iam:AttachRolePolicy", "iam:CreateRole", "iam:DeleteRole", "iam:DeleteRolePolicy",
+                "iam:DetachRolePolicy", "iam:GetRole", "iam:PassRole", "iam:PutRolePolicy",
+                "iam:TagRole", "iam:UntagRole"
+              ],
+              "Resource": { "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/imkan/*" }
+            }, {
+              "Effect": "Allow",
+              "Action": "iam:CreateServiceLinkedRole",
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "iam:AWSServiceName": [
+                    "ecs.amazonaws.com",
+                    "elasticloadbalancing.amazonaws.com",
+                    "rds.amazonaws.com"
+                  ]
+                }
+              }
+            }]
+          }
+        }]
+      }
+    },
+    "GitHubDeployRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/imkan/",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+              "Federated": {
+                "Fn::If": ["CreateGitHubOidcProvider", { "Ref": "GitHubOidcProvider" }, { "Ref": "ExistingGitHubOidcProviderArn" }]
+              }
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+              "StringEquals": {
+                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                "token.actions.githubusercontent.com:sub": { "Ref": "GitHubSubject" }
+              }
+            }
+          }]
+        },
+        "Policies": [{
+          "PolicyName": "DeployImkan",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "cloudformation:GetTemplateSummary",
+                "Resource": "*"
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "cloudformation:CreateChangeSet", "cloudformation:CreateStack", "cloudformation:DeleteChangeSet",
+                  "cloudformation:DescribeChangeSet", "cloudformation:DescribeStackEvents", "cloudformation:DescribeStackResources",
+                  "cloudformation:DescribeStacks", "cloudformation:ExecuteChangeSet",
+                  "cloudformation:ListStackResources", "cloudformation:UpdateStack"
+                ],
+                "Resource": { "Fn::Sub": "arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${EnvironmentName}-*/*" }
+              },
+              {
+                "Effect": "Allow",
+                "Action": "iam:PassRole",
+                "Resource": [
+                  { "Fn::GetAtt": ["CloudFormationExecutionRole", "Arn"] },
+                  { "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/imkan/*" }
+                ]
+              },
+              {
+                "Effect": "Allow",
+                "Action": "ecr:GetAuthorizationToken",
+                "Resource": "*"
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "ecr:BatchCheckLayerAvailability", "ecr:CompleteLayerUpload", "ecr:GetDownloadUrlForLayer",
+                  "ecr:DescribeImages", "ecr:InitiateLayerUpload", "ecr:PutImage", "ecr:UploadLayerPart"
+                ],
+                "Resource": { "Fn::Sub": "arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/${EnvironmentName}-*" }
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:DescribeTasks", "ecs:ListTasks",
+                  "ecs:RunTask", "ecs:StopTask"
+                ],
+                "Resource": "*"
+              }
+            ]
+          }
+        }]
+      }
+    }
+  },
+  "Outputs": {
+    "CloudFormationExecutionRoleArn": { "Value": { "Fn::GetAtt": ["CloudFormationExecutionRole", "Arn"] } },
+    "GitHubDeployRoleArn": { "Value": { "Fn::GetAtt": ["GitHubDeployRole", "Arn"] } }
+  }
+}

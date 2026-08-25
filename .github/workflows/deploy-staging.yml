@@ -1,0 +1,195 @@
+name: Deploy staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      desired_count:
+        description: Running web tasks after a successful migration
+        required: true
+        default: "1"
+        type: choice
+        options: ["1", "2"]
+      certificate_arn:
+        description: Optional ACM certificate ARN; set STAGING_BASE_URL when used
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: imkan-staging-deploy
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ENVIRONMENT_NAME: imkan-staging
+  FOUNDATION_STACK: imkan-staging-foundation
+  SERVICE_STACK: imkan-staging-service
+  CFN_ROLE_ARN: ${{ vars.AWS_CLOUDFORMATION_ROLE_ARN }}
+  AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+  SMOKE_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+
+      - name: Validate deployment configuration
+        env:
+          CERTIFICATE_ARN: ${{ inputs.certificate_arn }}
+        run: ./scripts/check-production-config.sh
+
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: imkan-${{ github.run_id }}
+
+      - name: Deploy or update the foundation
+        env:
+          CERTIFICATE_ARN: ${{ inputs.certificate_arn }}
+        run: |
+          aws cloudformation deploy \
+            --stack-name "$FOUNDATION_STACK" \
+            --template-file infra/aws/foundation.json \
+            --role-arn "$CFN_ROLE_ARN" \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName="$ENVIRONMENT_NAME" \
+              CertificateArn="$CERTIFICATE_ARN" \
+              DatabaseDeletionProtection=false \
+              DatabaseMultiAz=false
+
+      - name: Read foundation outputs
+        id: foundation
+        run: |
+          output() {
+            aws cloudformation describe-stacks --stack-name "$FOUNDATION_STACK" \
+              --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue | [0]" --output text
+          }
+          echo "web_repository=$(output WebRepositoryUri)" >> "$GITHUB_OUTPUT"
+          echo "migration_repository=$(output MigrationRepositoryUri)" >> "$GITHUB_OUTPUT"
+          echo "cluster=$(output ClusterName)" >> "$GITHUB_OUTPUT"
+          echo "subnet_a=$(output PublicSubnetAId)" >> "$GITHUB_OUTPUT"
+          echo "subnet_b=$(output PublicSubnetBId)" >> "$GITHUB_OUTPUT"
+          echo "task_security_group=$(output EcsSecurityGroupId)" >> "$GITHUB_OUTPUT"
+          echo "alb_dns=$(output AlbDnsName)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push immutable images
+        env:
+          WEB_REPOSITORY: ${{ steps.foundation.outputs.web_repository }}
+          MIGRATION_REPOSITORY: ${{ steps.foundation.outputs.migration_repository }}
+        run: |
+          WEB_TAG="web-$GITHUB_SHA"
+          MIGRATION_TAG="migration-$GITHUB_SHA"
+          docker build --target runner -t "$WEB_REPOSITORY:$WEB_TAG" .
+          docker build --target migration -t "$MIGRATION_REPOSITORY:$MIGRATION_TAG" .
+          if ! aws ecr describe-images --repository-name "$ENVIRONMENT_NAME-web" \
+            --image-ids imageTag="$WEB_TAG" >/dev/null 2>&1; then
+            docker push "$WEB_REPOSITORY:$WEB_TAG"
+          fi
+          if ! aws ecr describe-images --repository-name "$ENVIRONMENT_NAME-migration" \
+            --image-ids imageTag="$MIGRATION_TAG" >/dev/null 2>&1; then
+            docker push "$MIGRATION_REPOSITORY:$MIGRATION_TAG"
+          fi
+
+      - name: Register the migration release without changing web traffic
+        id: release_state
+        env:
+          DESIRED_COUNT: ${{ inputs.desired_count }}
+        run: |
+          WEB_TAG="web-$GITHUB_SHA"
+          MIGRATION_TAG="migration-$GITHUB_SHA"
+          if aws cloudformation describe-stacks --stack-name "$SERVICE_STACK" >/dev/null 2>&1; then
+            CURRENT_WEB_TAG=$(aws cloudformation describe-stacks --stack-name "$SERVICE_STACK" \
+              --query "Stacks[0].Parameters[?ParameterKey=='WebImageTag'].ParameterValue | [0]" --output text)
+            CURRENT_DESIRED=$(aws cloudformation describe-stacks --stack-name "$SERVICE_STACK" \
+              --query "Stacks[0].Parameters[?ParameterKey=='DesiredCount'].ParameterValue | [0]" --output text)
+          else
+            CURRENT_WEB_TAG="$WEB_TAG"
+            CURRENT_DESIRED=0
+          fi
+          echo "previous_web_tag=$CURRENT_WEB_TAG" >> "$GITHUB_OUTPUT"
+          echo "previous_desired_count=$CURRENT_DESIRED" >> "$GITHUB_OUTPUT"
+          aws cloudformation deploy \
+            --stack-name "$SERVICE_STACK" \
+            --template-file infra/aws/service.json \
+            --role-arn "$CFN_ROLE_ARN" \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName="$ENVIRONMENT_NAME" \
+              WebImageTag="$CURRENT_WEB_TAG" \
+              MigrationImageTag="$MIGRATION_TAG" \
+              DesiredCount="$CURRENT_DESIRED"
+
+      - name: Run database migrations
+        env:
+          CLUSTER: ${{ steps.foundation.outputs.cluster }}
+          SUBNET_A: ${{ steps.foundation.outputs.subnet_a }}
+          SUBNET_B: ${{ steps.foundation.outputs.subnet_b }}
+          TASK_SECURITY_GROUP: ${{ steps.foundation.outputs.task_security_group }}
+        run: |
+          TASK_DEFINITION=$(aws cloudformation describe-stacks --stack-name "$SERVICE_STACK" \
+            --query "Stacks[0].Outputs[?OutputKey=='MigrationTaskDefinitionArn'].OutputValue | [0]" --output text)
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASK_DEFINITION" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_A,$SUBNET_B],securityGroups=[$TASK_SECURITY_GROUP],assignPublicIp=ENABLED}" \
+            --started-by "github-$GITHUB_RUN_ID" \
+            --query 'tasks[0].taskArn' --output text)
+          test "$TASK_ARN" != "None"
+          if ! timeout 15m aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"; then
+            aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" \
+              --reason "Migration exceeded the 15 minute deployment limit"
+            exit 1
+          fi
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[?name==`migration`].exitCode | [0]' --output text)
+          if [ "$EXIT_CODE" != "0" ]; then
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+              --query 'tasks[0].{stopCode:stopCode,reason:stoppedReason,containers:containers[].{name:name,reason:reason,exitCode:exitCode}}'
+            exit 1
+          fi
+
+      - name: Deploy the web image after migrations succeed
+        env:
+          DESIRED_COUNT: ${{ inputs.desired_count }}
+        run: |
+          aws cloudformation deploy \
+            --stack-name "$SERVICE_STACK" \
+            --template-file infra/aws/service.json \
+            --role-arn "$CFN_ROLE_ARN" \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName="$ENVIRONMENT_NAME" \
+              WebImageTag="web-$GITHUB_SHA" \
+              MigrationImageTag="migration-$GITHUB_SHA" \
+              DesiredCount="$DESIRED_COUNT"
+
+      - name: Smoke the deployed health endpoint
+        env:
+          ALB_DNS: ${{ steps.foundation.outputs.alb_dns }}
+        run: |
+          BASE_URL=${SMOKE_BASE_URL:-http://$ALB_DNS}
+          curl --fail --show-error --silent --retry 12 --retry-delay 5 \
+            "$BASE_URL/api/health"

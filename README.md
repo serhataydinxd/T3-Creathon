@@ -95,6 +95,7 @@ excluded from Git and the Docker build context.
 - [Data, API and security](docs/05-data-api-security.md)
 - [Build, testing and demo plan](docs/06-build-test-demo.md)
 - [Public deployment](docs/07-deployment.md)
+- [Production runbook](docs/09-production-runbook.md)
 
 The original Creathon problem booklet is retained locally for traceability but
 excluded from the public repository until redistribution permission is

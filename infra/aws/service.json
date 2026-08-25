@@ -1,0 +1,183 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "İMKÂN immutable ECS web and migration releases.",
+  "Parameters": {
+    "EnvironmentName": {
+      "Type": "String",
+      "Default": "imkan-staging",
+      "AllowedPattern": "[a-z][a-z0-9-]{2,30}"
+    },
+    "WebImageTag": {
+      "Type": "String",
+      "AllowedPattern": "web-[a-f0-9]{7,64}"
+    },
+    "MigrationImageTag": {
+      "Type": "String",
+      "AllowedPattern": "migration-[a-f0-9]{7,64}"
+    },
+    "DesiredCount": {
+      "Type": "Number",
+      "Default": 1,
+      "MinValue": 0,
+      "MaxValue": 4
+    }
+  },
+  "Resources": {
+    "WebTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Cpu": "512",
+        "ExecutionRoleArn": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-TaskExecutionRoleArn" } },
+        "Family": { "Fn::Sub": "${EnvironmentName}-web" },
+        "Memory": "1024",
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": ["FARGATE"],
+        "RuntimePlatform": { "CpuArchitecture": "X86_64", "OperatingSystemFamily": "LINUX" },
+        "TaskRoleArn": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-TaskRoleArn" } },
+        "ContainerDefinitions": [{
+          "Name": "web",
+          "Essential": true,
+          "Image": {
+            "Fn::Sub": [
+              "${RepositoryUri}:${WebImageTag}",
+              { "RepositoryUri": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-WebRepositoryUri" } } }
+            ]
+          },
+          "Environment": [
+            { "Name": "APP_MODE", "Value": "replay" },
+            { "Name": "DATABASE_SSL", "Value": "true" },
+            { "Name": "DB_HOST", "Value": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseEndpoint" } } },
+            { "Name": "DB_NAME", "Value": "imkan" },
+            { "Name": "DB_PORT", "Value": "5432" },
+            { "Name": "NODE_ENV", "Value": "production" },
+            { "Name": "PORT", "Value": "3000" }
+          ],
+          "Secrets": [
+            {
+              "Name": "DB_USER",
+              "ValueFrom": {
+                "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "username", "", ""]]
+              }
+            },
+            {
+              "Name": "DB_PASSWORD",
+              "ValueFrom": {
+                "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "password", "", ""]]
+              }
+            }
+          ],
+          "HealthCheck": {
+            "Command": ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""],
+            "Interval": 30,
+            "Retries": 3,
+            "StartPeriod": 20,
+            "Timeout": 5
+          },
+          "LogConfiguration": {
+            "LogDriver": "awslogs",
+            "Options": {
+              "awslogs-group": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-WebLogGroup" } },
+              "awslogs-region": { "Ref": "AWS::Region" },
+              "awslogs-stream-prefix": "web"
+            }
+          },
+          "PortMappings": [{ "ContainerPort": 3000, "HostPort": 3000, "Protocol": "tcp" }],
+          "ReadonlyRootFilesystem": true,
+          "User": "1001"
+        }]
+      }
+    },
+    "MigrationTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Cpu": "256",
+        "ExecutionRoleArn": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-TaskExecutionRoleArn" } },
+        "Family": { "Fn::Sub": "${EnvironmentName}-migration" },
+        "Memory": "512",
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": ["FARGATE"],
+        "RuntimePlatform": { "CpuArchitecture": "X86_64", "OperatingSystemFamily": "LINUX" },
+        "TaskRoleArn": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-TaskRoleArn" } },
+        "ContainerDefinitions": [{
+          "Name": "migration",
+          "Essential": true,
+          "Image": {
+            "Fn::Sub": [
+              "${RepositoryUri}:${MigrationImageTag}",
+              { "RepositoryUri": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-MigrationRepositoryUri" } } }
+            ]
+          },
+          "Environment": [
+            { "Name": "DATABASE_SSL", "Value": "true" },
+            { "Name": "DB_HOST", "Value": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseEndpoint" } } },
+            { "Name": "DB_NAME", "Value": "imkan" },
+            { "Name": "DB_PORT", "Value": "5432" },
+            { "Name": "NODE_ENV", "Value": "production" }
+          ],
+          "Secrets": [
+            {
+              "Name": "DB_USER",
+              "ValueFrom": {
+                "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "username", "", ""]]
+              }
+            },
+            {
+              "Name": "DB_PASSWORD",
+              "ValueFrom": {
+                "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "password", "", ""]]
+              }
+            }
+          ],
+          "LogConfiguration": {
+            "LogDriver": "awslogs",
+            "Options": {
+              "awslogs-group": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-MigrationLogGroup" } },
+              "awslogs-region": { "Ref": "AWS::Region" },
+              "awslogs-stream-prefix": "migration"
+            }
+          },
+          "ReadonlyRootFilesystem": false
+        }]
+      }
+    },
+    "WebService": {
+      "Type": "AWS::ECS::Service",
+      "Properties": {
+        "Cluster": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-ClusterName" } },
+        "DeploymentConfiguration": {
+          "DeploymentCircuitBreaker": { "Enable": true, "Rollback": true },
+          "MaximumPercent": 200,
+          "MinimumHealthyPercent": 100
+        },
+        "DesiredCount": { "Ref": "DesiredCount" },
+        "EnableECSManagedTags": true,
+        "HealthCheckGracePeriodSeconds": 30,
+        "LaunchType": "FARGATE",
+        "LoadBalancers": [{
+          "ContainerName": "web",
+          "ContainerPort": 3000,
+          "TargetGroupArn": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-TargetGroupArn" } }
+        }],
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "ENABLED",
+            "SecurityGroups": [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-EcsSecurityGroupId" } }],
+            "Subnets": [
+              { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-PublicSubnetAId" } },
+              { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-PublicSubnetBId" } }
+            ]
+          }
+        },
+        "PlatformVersion": "LATEST",
+        "PropagateTags": "SERVICE",
+        "ServiceName": { "Fn::Sub": "${EnvironmentName}-web" },
+        "TaskDefinition": { "Ref": "WebTaskDefinition" }
+      }
+    }
+  },
+  "Outputs": {
+    "MigrationTaskDefinitionArn": { "Value": { "Ref": "MigrationTaskDefinition" } },
+    "WebServiceName": { "Value": { "Fn::GetAtt": ["WebService", "Name"] } },
+    "WebTaskDefinitionArn": { "Value": { "Ref": "WebTaskDefinition" } }
+  }
+}

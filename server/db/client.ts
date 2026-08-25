@@ -15,9 +15,28 @@ type GlobalDatabase = {
 
 const globalForDatabase = globalThis as unknown as GlobalDatabase;
 
+export function resolveDatabaseUrl(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+) {
+  if (env.DATABASE_URL) return env.DATABASE_URL;
+
+  const required = ["DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD"] as const;
+  const missing = required.filter((key) => !env[key]);
+  if (missing.length > 0) {
+    throw new Error(
+      `Database configuration is incomplete. Set DATABASE_URL or: ${missing.join(", ")}.`,
+    );
+  }
+
+  const username = encodeURIComponent(env.DB_USER!);
+  const password = encodeURIComponent(env.DB_PASSWORD!);
+  const database = encodeURIComponent(env.DB_NAME!);
+  const port = env.DB_PORT ?? "5432";
+  return `postgresql://${username}:${password}@${env.DB_HOST}:${port}/${database}`;
+}
+
 function initializeDatabase() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is required for authentication and persistence.");
+  const connectionString = resolveDatabaseUrl();
 
   if (connectionString.startsWith("pglite:")) {
     const dataDir = connectionString.slice("pglite:".length) || "memory://";

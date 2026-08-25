@@ -15,6 +15,12 @@ enabled, keep the same application image and add a second service:
 Use Amazon RDS for PostgreSQL in private subnets. This matches the architecture
 without forcing the prototype to operate a cluster before it needs one.
 
+The repository now includes CloudFormation templates in `infra/aws/`, a
+GitHub-OIDC staging workflow and the detailed
+[production runbook](09-production-runbook.md). AWS creation remains an explicit
+manual gate because the account, Region, repository and optional domain are
+deployment-owner inputs.
+
 ## Container verification
 
 ```bash

@@ -15,7 +15,9 @@ RUN npm run build
 FROM deps AS migration
 WORKDIR /app
 COPY . .
-CMD ["npm", "run", "db:migrate"]
+ENV NODE_ENV=production
+USER node
+CMD ["npm", "run", "db:release"]
 
 FROM node:24-alpine AS runner
 WORKDIR /app
