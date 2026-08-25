@@ -76,6 +76,17 @@ jobs:
               DatabaseDeletionProtection=false \
               DatabaseMultiAz=false
 
+      - name: Report foundation failure details
+        if: failure()
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name "$FOUNDATION_STACK" \
+            --query 'Stacks[0].{Status:StackStatus,Reason:StackStatusReason}' || true
+          aws cloudformation describe-stack-events \
+            --stack-name "$FOUNDATION_STACK" \
+            --query 'StackEvents[?ResourceStatus==`CREATE_FAILED` || ResourceStatus==`ROLLBACK_FAILED`].[Timestamp,LogicalResourceId,ResourceType,ResourceStatusReason]' \
+            --output table || true
+
       - name: Read foundation outputs
         id: foundation
         run: |
