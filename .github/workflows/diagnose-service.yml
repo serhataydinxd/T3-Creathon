@@ -21,10 +21,13 @@ jobs:
 
       - name: Describe service and tasks
         run: |
+          aws cloudformation describe-stacks \
+            --stack-name imkan-staging-service \
+            --query 'Stacks[0].{status:StackStatus,reason:StackStatusReason,parameters:Parameters}'
           aws ecs describe-services \
             --cluster imkan-staging-cluster \
             --services imkan-staging-web \
-            --query 'services[0].{status:status,desired:desiredCount,running:runningCount,pending:pendingCount,deployments:deployments[].{status:status,rolloutState:rolloutState,rolloutStateReason:rolloutStateReason,desired:desiredCount,running:runningCount,pending:pendingCount,failed:failedTasks},events:events[0:10].[createdAt,message]}'
+            --query 'services[0].{status:status,desired:desiredCount,running:runningCount,pending:pendingCount,taskDefinition:taskDefinition,deployments:deployments[].{status:status,taskDefinition:taskDefinition,rolloutState:rolloutState,rolloutStateReason:rolloutStateReason,desired:desiredCount,running:runningCount,pending:pendingCount,failed:failedTasks},events:events[0:10].[createdAt,message]}'
           TASK_ARNS=$(aws ecs list-tasks \
             --cluster imkan-staging-cluster \
             --service-name imkan-staging-web \
@@ -33,7 +36,7 @@ jobs:
             aws ecs describe-tasks \
               --cluster imkan-staging-cluster \
               --tasks $TASK_ARNS \
-              --query 'tasks[].{taskArn:taskArn,lastStatus:lastStatus,desiredStatus:desiredStatus,stopCode:stopCode,stoppedReason:stoppedReason,healthStatus:healthStatus,containers:containers[].{name:name,lastStatus:lastStatus,healthStatus:healthStatus,reason:reason,exitCode:exitCode}}'
+              --query 'tasks[].{taskArn:taskArn,taskDefinitionArn:taskDefinitionArn,lastStatus:lastStatus,desiredStatus:desiredStatus,stopCode:stopCode,stoppedReason:stoppedReason,healthStatus:healthStatus,containers:containers[].{name:name,image:image,lastStatus:lastStatus,healthStatus:healthStatus,reason:reason,exitCode:exitCode}}'
             for TASK_ARN in $TASK_ARNS; do
               TASK_ID=${TASK_ARN##*/}
               echo "CloudWatch log for task $TASK_ID"
