@@ -7,6 +7,12 @@ on:
         description: Numeric revision of imkan-staging-web to probe
         required: true
         type: string
+      probe_mode:
+        description: Probe pg directly or execute the compiled health route
+        required: true
+        default: direct
+        type: choice
+        options: [direct, health-route]
 
 permissions:
   contents: read
@@ -28,6 +34,7 @@ jobs:
       - name: Run verified database probe from the web image
         env:
           REVISION: ${{ inputs.task_definition_revision }}
+          PROBE_MODE: ${{ inputs.probe_mode }}
         run: |
           case "$REVISION" in
             *[!0-9]*|"") echo "task_definition_revision must be numeric" >&2; exit 1 ;;
@@ -40,7 +47,15 @@ jobs:
           SUBNET_A=$(output PublicSubnetAId)
           SUBNET_B=$(output PublicSubnetBId)
           TASK_SECURITY_GROUP=$(output EcsSecurityGroupId)
-          PROBE_SCRIPT="const fs=require('node:fs');const {Pool}=require('pg');const pool=new Pool({host:process.env.DB_HOST,port:Number(process.env.DB_PORT),database:process.env.DB_NAME,user:process.env.DB_USER,password:process.env.DB_PASSWORD,ssl:{ca:fs.readFileSync(process.env.DATABASE_CA_CERT,'utf8'),rejectUnauthorized:true}});pool.query('select 1').then(async()=>{console.log('Verified database TLS probe succeeded.');await pool.end()}).catch(async error=>{const codes=[];let current=error;while(current){if(current.code)codes.push(current.code);current=current.cause}console.error('Database probe failed with codes:',codes.join(',')||'UNKNOWN');await pool.end();process.exitCode=1})"
+          case "$PROBE_MODE" in
+            direct)
+              PROBE_SCRIPT="const fs=require('node:fs');const {Pool}=require('pg');const pool=new Pool({host:process.env.DB_HOST,port:Number(process.env.DB_PORT),database:process.env.DB_NAME,user:process.env.DB_USER,password:process.env.DB_PASSWORD,ssl:{ca:fs.readFileSync(process.env.DATABASE_CA_CERT,'utf8'),rejectUnauthorized:true}});pool.query('select 1').then(async()=>{console.log('Verified database TLS probe succeeded.');await pool.end()}).catch(async error=>{const codes=[];let current=error;while(current){if(current.code)codes.push(current.code);current=current.cause}console.error('Database probe failed with codes:',codes.join(',')||'UNKNOWN');await pool.end();process.exitCode=1})"
+              ;;
+            health-route)
+              PROBE_SCRIPT="const pg=require('pg');const codes=error=>{const values=[];let current=error;while(current){if(current.code)values.push(current.code);current=current.cause}return values.join(',')||'UNKNOWN'};const original=pg.Pool.prototype.query;pg.Pool.prototype.query=function(...args){const result=original.apply(this,args);return result&&typeof result.catch==='function'?result.catch(error=>{console.error('Health route pg query failed with codes:',codes(error));throw error}):result};(async()=>{const routeModule=require('./.next/server/app/api/health/route.js').routeModule;await routeModule._lazyUserland.waitUntilLoaded();const response=await routeModule.userland.GET();console.log('Health route response:',response.status,await response.text());process.exit(response.ok?0:1)})().catch(error=>{console.error('Health route execution failed with codes:',codes(error));process.exit(1)})"
+              ;;
+            *) echo "probe_mode must be direct or health-route" >&2; exit 1 ;;
+          esac
           OVERRIDES=$(jq -cn --arg script "$PROBE_SCRIPT" \
             '{containerOverrides:[{name:"web",command:["node","-e",$script]}]}')
           TASK_ARN=$(aws ecs run-task \
