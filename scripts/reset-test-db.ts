@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+import { mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { sql } from "drizzle-orm";
 import { closeDatabase, getDb, migrateDatabase } from "../server/db/client";
 
@@ -8,6 +10,13 @@ const safePglite = databaseUrl.startsWith("pglite:") && databaseUrl.includes("im
 const safePostgres = databaseUrl.startsWith("postgres") && new URL(databaseUrl).pathname === "/imkan_test";
 if (!safePglite && !safePostgres) {
   throw new Error("Refusing to reset a database not explicitly named imkan-test/imkan_test.");
+}
+
+if (safePglite) {
+  const dataPath = databaseUrl.slice("pglite:".length);
+  if (dataPath && dataPath !== "memory://") {
+    mkdirSync(dirname(resolve(dataPath)), { recursive: true });
+  }
 }
 
 const db = getDb();

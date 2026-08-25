@@ -50,7 +50,7 @@ artifact and dependency directory. Verify both targets locally:
 ```bash
 docker build --target runner -t imkan-web:local .
 docker build --target migration -t imkan-migration:local .
-docker compose up -d db
+docker compose up -d postgres
 npm run db:migrate
 npm run db:seed
 docker run --rm --network host \
