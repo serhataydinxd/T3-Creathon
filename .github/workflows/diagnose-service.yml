@@ -34,4 +34,12 @@ jobs:
               --cluster imkan-staging-cluster \
               --tasks $TASK_ARNS \
               --query 'tasks[].{taskArn:taskArn,lastStatus:lastStatus,desiredStatus:desiredStatus,stopCode:stopCode,stoppedReason:stoppedReason,healthStatus:healthStatus,containers:containers[].{name:name,lastStatus:lastStatus,healthStatus:healthStatus,reason:reason,exitCode:exitCode}}'
+            for TASK_ARN in $TASK_ARNS; do
+              TASK_ID=${TASK_ARN##*/}
+              echo "CloudWatch log for task $TASK_ID"
+              aws logs get-log-events \
+                --log-group-name /ecs/imkan-staging/web \
+                --log-stream-name "web/web/$TASK_ID" \
+                --query 'events[].message' --output text || true
+            done
           fi
