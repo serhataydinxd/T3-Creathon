@@ -1,0 +1,67 @@
+name: Recover staging service
+
+on:
+  workflow_dispatch:
+    inputs:
+      verified_task_definition_revision:
+        description: Revision already proven by Diagnose staging web database
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: imkan-recover-${{ github.run_id }}
+
+      - name: Update the scoped recovery permission
+        env:
+          CFN_ROLE_ARN: ${{ vars.AWS_CLOUDFORMATION_ROLE_ARN }}
+          OIDC_SUBJECT: ${{ vars.OIDC_SUBJECT }}
+        run: |
+          aws cloudformation deploy \
+            --stack-name imkan-staging-oidc \
+            --template-file infra/aws/github-oidc-role.json \
+            --role-arn "$CFN_ROLE_ARN" \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName=imkan-staging \
+              GitHubSubject="$OIDC_SUBJECT"
+
+      - name: Recover the service to the verified task definition
+        env:
+          REVISION: ${{ inputs.verified_task_definition_revision }}
+        run: |
+          case "$REVISION" in
+            *[!0-9]*|"") echo "verified_task_definition_revision must be numeric" >&2; exit 1 ;;
+          esac
+          TASK_DEFINITION="imkan-staging-web:$REVISION"
+          IMAGE=$(aws ecs describe-task-definition --task-definition "$TASK_DEFINITION" \
+            --query 'taskDefinition.containerDefinitions[?name==`web`].image | [0]' --output text)
+          test -n "$IMAGE" && test "$IMAGE" != "None"
+          echo "Recovering imkan-staging-web to verified image $IMAGE"
+          sleep 10
+          aws ecs update-service \
+            --cluster imkan-staging-cluster \
+            --service imkan-staging-web \
+            --task-definition "$TASK_DEFINITION" \
+            --desired-count 1 \
+            --force-new-deployment \
+            --query 'service.{serviceName:serviceName,taskDefinition:taskDefinition,desiredCount:desiredCount}'
+          aws ecs wait services-stable \
+            --cluster imkan-staging-cluster \
+            --services imkan-staging-web

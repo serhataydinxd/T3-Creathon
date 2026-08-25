@@ -138,6 +138,11 @@
               },
               {
                 "Effect": "Allow",
+                "Action": "ecs:UpdateService",
+                "Resource": { "Fn::Sub": "arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:service/${EnvironmentName}-cluster/${EnvironmentName}-web" }
+              },
+              {
+                "Effect": "Allow",
                 "Action": ["logs:DescribeLogStreams", "logs:GetLogEvents"],
                 "Resource": { "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${EnvironmentName}/*" }
               }
