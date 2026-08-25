@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "İMKÂN immutable ECS web and migration releases.",
+  "Description": "IMKAN immutable ECS web and migration releases.",
   "Parameters": {
     "EnvironmentName": {
       "Type": "String",

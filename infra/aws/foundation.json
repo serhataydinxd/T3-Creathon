@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "İMKÂN staging foundation: no-NAT VPC, ALB, ECS, ECR and private RDS.",
+  "Description": "IMKAN staging foundation: no-NAT VPC, ALB, ECS, ECR and private RDS.",
   "Parameters": {
     "EnvironmentName": {
       "Type": "String",
@@ -149,7 +149,7 @@
     "DatabaseSubnetGroup": {
       "Type": "AWS::RDS::DBSubnetGroup",
       "Properties": {
-        "DBSubnetGroupDescription": "Private İMKÂN database subnets",
+        "DBSubnetGroupDescription": "Private IMKAN database subnets",
         "SubnetIds": [{ "Ref": "DatabaseSubnetA" }, { "Ref": "DatabaseSubnetB" }]
       }
     },

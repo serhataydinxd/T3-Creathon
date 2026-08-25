@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "One-time bootstrap for İMKÂN GitHub Actions OIDC deployment roles.",
+  "Description": "One-time bootstrap for IMKAN GitHub Actions OIDC deployment roles.",
   "Parameters": {
     "GitHubSubject": {
       "Type": "String",

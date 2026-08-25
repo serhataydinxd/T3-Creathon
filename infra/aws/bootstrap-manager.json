@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Ephemeral one-off task definition for the first İMKÂN manager.",
+  "Description": "Ephemeral one-off task definition for the first IMKAN manager.",
   "Parameters": {
     "EnvironmentName": {
       "Type": "String",
