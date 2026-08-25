@@ -135,6 +135,11 @@
                   "ecs:RunTask", "ecs:StopTask"
                 ],
                 "Resource": "*"
+              },
+              {
+                "Effect": "Allow",
+                "Action": ["logs:DescribeLogStreams", "logs:GetLogEvents"],
+                "Resource": { "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${EnvironmentName}/*" }
               }
             ]
           }
