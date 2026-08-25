@@ -1,0 +1,37 @@
+name: Diagnose staging service
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: imkan-service-diagnose-${{ github.run_id }}
+
+      - name: Describe service and tasks
+        run: |
+          aws ecs describe-services \
+            --cluster imkan-staging-cluster \
+            --services imkan-staging-web \
+            --query 'services[0].{status:status,desired:desiredCount,running:runningCount,pending:pendingCount,deployments:deployments[].{status:status,rolloutState:rolloutState,rolloutStateReason:rolloutStateReason,desired:desiredCount,running:runningCount,pending:pendingCount,failed:failedTasks},events:events[0:10].[createdAt,message]}'
+          TASK_ARNS=$(aws ecs list-tasks \
+            --cluster imkan-staging-cluster \
+            --service-name imkan-staging-web \
+            --query 'taskArns' --output text)
+          if [ -n "$TASK_ARNS" ] && [ "$TASK_ARNS" != "None" ]; then
+            aws ecs describe-tasks \
+              --cluster imkan-staging-cluster \
+              --tasks $TASK_ARNS \
+              --query 'tasks[].{taskArn:taskArn,lastStatus:lastStatus,desiredStatus:desiredStatus,stopCode:stopCode,stoppedReason:stoppedReason,healthStatus:healthStatus,containers:containers[].{name:name,lastStatus:lastStatus,healthStatus:healthStatus,reason:reason,exitCode:exitCode}}'
+          fi
