@@ -2,6 +2,7 @@ FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
+RUN node -e "const fs=require('node:fs');fetch('https://truststore.pki.rds.amazonaws.com/eu-north-1/eu-north-1-bundle.pem').then(async r=>{if(!r.ok)throw new Error('RDS CA download failed: '+r.status);const pem=await r.text();if(!pem.includes('BEGIN CERTIFICATE'))throw new Error('RDS CA bundle is not PEM');fs.writeFileSync('/app/rds-ca.pem',pem)})"
 
 FROM node:24-alpine AS builder
 WORKDIR /app
@@ -26,6 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
+COPY --from=deps --chown=nextjs:nodejs /app/rds-ca.pem ./rds-ca.pem
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs

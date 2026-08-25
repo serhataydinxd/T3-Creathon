@@ -45,6 +45,7 @@
           },
           "Environment": [
             { "Name": "APP_MODE", "Value": "replay" },
+            { "Name": "DATABASE_CA_CERT", "Value": "/app/rds-ca.pem" },
             { "Name": "DATABASE_SSL", "Value": "true" },
             { "Name": "DB_HOST", "Value": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseEndpoint" } } },
             { "Name": "DB_NAME", "Value": "imkan" },
@@ -108,6 +109,7 @@
             ]
           },
           "Environment": [
+            { "Name": "DATABASE_CA_CERT", "Value": "/app/rds-ca.pem" },
             { "Name": "DATABASE_SSL", "Value": "true" },
             { "Name": "DB_HOST", "Value": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseEndpoint" } } },
             { "Name": "DB_NAME", "Value": "imkan" },

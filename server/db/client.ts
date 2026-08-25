@@ -4,6 +4,7 @@ import { migrate as migrateNodePg } from "drizzle-orm/node-postgres/migrator";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
+import { readFileSync } from "node:fs";
 import * as schema from "./schema";
 
 type ImkanDatabase = NodePgDatabase<typeof schema>;
@@ -35,6 +36,22 @@ export function resolveDatabaseUrl(
   return `postgresql://${username}:${password}@${env.DB_HOST}:${port}/${database}`;
 }
 
+export function resolveDatabaseSsl(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+  readCertificate: (path: string, encoding: BufferEncoding) => string = readFileSync,
+) {
+  if (env.DATABASE_SSL !== "true") return undefined;
+
+  if (!env.DATABASE_CA_CERT) {
+    throw new Error("DATABASE_CA_CERT is required when DATABASE_SSL=true.");
+  }
+
+  return {
+    ca: readCertificate(env.DATABASE_CA_CERT, "utf8"),
+    rejectUnauthorized: true as const,
+  };
+}
+
 function initializeDatabase() {
   const connectionString = resolveDatabaseUrl();
 
@@ -50,7 +67,7 @@ function initializeDatabase() {
   const pool = new Pool({
     connectionString,
     max: process.env.NODE_ENV === "production" ? 10 : 4,
-    ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: true } : undefined,
+    ssl: resolveDatabaseSsl(),
   });
   globalForDatabase.imkanDriver = pool;
   globalForDatabase.imkanDriverType = "node-pg";
