@@ -1,0 +1,63 @@
+name: Diagnose staging web database
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_definition_revision:
+        description: Numeric revision of imkan-staging-web to probe
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 10
+    steps:
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: imkan-web-db-diagnose-${{ github.run_id }}
+
+      - name: Run verified database probe from the web image
+        env:
+          REVISION: ${{ inputs.task_definition_revision }}
+        run: |
+          case "$REVISION" in
+            *[!0-9]*|"") echo "task_definition_revision must be numeric" >&2; exit 1 ;;
+          esac
+          output() {
+            aws cloudformation describe-stacks --stack-name imkan-staging-foundation \
+              --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue | [0]" --output text
+          }
+          CLUSTER=$(output ClusterName)
+          SUBNET_A=$(output PublicSubnetAId)
+          SUBNET_B=$(output PublicSubnetBId)
+          TASK_SECURITY_GROUP=$(output EcsSecurityGroupId)
+          PROBE_SCRIPT="const fs=require('node:fs');const {Pool}=require('pg');const pool=new Pool({host:process.env.DB_HOST,port:Number(process.env.DB_PORT),database:process.env.DB_NAME,user:process.env.DB_USER,password:process.env.DB_PASSWORD,ssl:{ca:fs.readFileSync(process.env.DATABASE_CA_CERT,'utf8'),rejectUnauthorized:true}});pool.query('select 1').then(async()=>{console.log('Verified database TLS probe succeeded.');await pool.end()}).catch(async error=>{const codes=[];let current=error;while(current){if(current.code)codes.push(current.code);current=current.cause}console.error('Database probe failed with codes:',codes.join(',')||'UNKNOWN');await pool.end();process.exitCode=1})"
+          OVERRIDES=$(jq -cn --arg script "$PROBE_SCRIPT" \
+            '{containerOverrides:[{name:"web",command:["node","-e",$script]}]}')
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "imkan-staging-web:$REVISION" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_A,$SUBNET_B],securityGroups=[$TASK_SECURITY_GROUP],assignPublicIp=ENABLED}" \
+            --overrides "$OVERRIDES" \
+            --started-by "web-db-diagnose-$GITHUB_RUN_ID" \
+            --query 'tasks[0].taskArn' --output text)
+          test -n "$TASK_ARN" && test "$TASK_ARN" != "None"
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"
+          TASK_ID=${TASK_ARN##*/}
+          aws logs get-log-events \
+            --log-group-name /ecs/imkan-staging/web \
+            --log-stream-name "web/web/$TASK_ID" \
+            --query 'events[].message' --output text
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[?name==`web`].exitCode | [0]' --output text)
+          test "$EXIT_CODE" = "0"
