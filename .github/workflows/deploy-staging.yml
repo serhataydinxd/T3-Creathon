@@ -30,6 +30,7 @@ env:
   SERVICE_STACK: imkan-staging-service
   CFN_ROLE_ARN: ${{ vars.AWS_CLOUDFORMATION_ROLE_ARN }}
   AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+  OIDC_SUBJECT: ${{ vars.OIDC_SUBJECT }}
   SMOKE_BASE_URL: ${{ vars.STAGING_BASE_URL }}
 
 jobs:
@@ -59,6 +60,28 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           role-session-name: imkan-${{ github.run_id }}
+
+      - name: Keep deployment roles current
+        run: |
+          test -n "$OIDC_SUBJECT"
+          aws cloudformation deploy \
+            --stack-name "$ENVIRONMENT_NAME-oidc" \
+            --template-file infra/aws/github-oidc-role.json \
+            --role-arn "$CFN_ROLE_ARN" \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName="$ENVIRONMENT_NAME" \
+              GitHubSubject="$OIDC_SUBJECT"
+
+      - name: Remove a previously rolled-back foundation
+        run: |
+          STATUS=$(aws cloudformation describe-stacks --stack-name "$FOUNDATION_STACK" \
+            --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
+          if [ "$STATUS" = "ROLLBACK_COMPLETE" ]; then
+            aws cloudformation delete-stack --stack-name "$FOUNDATION_STACK"
+            aws cloudformation wait stack-delete-complete --stack-name "$FOUNDATION_STACK"
+          fi
 
       - name: Deploy or update the foundation
         env:

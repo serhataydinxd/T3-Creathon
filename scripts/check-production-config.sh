@@ -15,6 +15,7 @@ require FOUNDATION_STACK
 require SERVICE_STACK
 require CFN_ROLE_ARN
 require AWS_DEPLOY_ROLE_ARN
+require OIDC_SUBJECT
 
 case "$AWS_REGION" in
   *[!a-z0-9-]*|"") echo "AWS_REGION has an invalid format." >&2; exit 1 ;;

@@ -112,7 +112,7 @@
     "LoadBalancerSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Public HTTP and HTTPS ingress to the İMKÂN ALB",
+        "GroupDescription": "Public HTTP and HTTPS ingress to the IMKAN ALB",
         "VpcId": { "Ref": "Vpc" },
         "SecurityGroupIngress": [
           { "IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "CidrIp": "0.0.0.0/0" },
@@ -123,7 +123,7 @@
     "EcsSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Only the ALB may reach İMKÂN tasks",
+        "GroupDescription": "Only the ALB may reach IMKAN tasks",
         "VpcId": { "Ref": "Vpc" },
         "SecurityGroupIngress": [{
           "IpProtocol": "tcp",
@@ -136,7 +136,7 @@
     "DatabaseSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "PostgreSQL ingress from İMKÂN tasks only",
+        "GroupDescription": "PostgreSQL ingress from IMKAN tasks only",
         "VpcId": { "Ref": "Vpc" },
         "SecurityGroupIngress": [{
           "IpProtocol": "tcp",
@@ -167,8 +167,8 @@
     },
     "Database": {
       "Type": "AWS::RDS::DBInstance",
-      "DeletionPolicy": "Snapshot",
-      "UpdateReplacePolicy": "Snapshot",
+      "DeletionPolicy": "Delete",
+      "UpdateReplacePolicy": "Delete",
       "Properties": {
         "AllocatedStorage": "20",
         "MaxAllocatedStorage": 100,
@@ -199,7 +199,7 @@
     "WebRepository": {
       "Type": "AWS::ECR::Repository",
       "Properties": {
-        "EmptyOnDelete": false,
+        "EmptyOnDelete": true,
         "ImageScanningConfiguration": { "ScanOnPush": true },
         "ImageTagMutability": "IMMUTABLE",
         "RepositoryName": { "Fn::Sub": "${EnvironmentName}-web" },
@@ -209,7 +209,7 @@
     "MigrationRepository": {
       "Type": "AWS::ECR::Repository",
       "Properties": {
-        "EmptyOnDelete": false,
+        "EmptyOnDelete": true,
         "ImageScanningConfiguration": { "ScanOnPush": true },
         "ImageTagMutability": "IMMUTABLE",
         "RepositoryName": { "Fn::Sub": "${EnvironmentName}-migration" },

@@ -37,6 +37,7 @@ variables:
 - `AWS_DEPLOY_ROLE_ARN`
 - `AWS_CLOUDFORMATION_ROLE_ARN`
 - `AWS_REGION`
+- `OIDC_SUBJECT` (the same exact subject used to bootstrap the role)
 - `STAGING_BASE_URL` when TLS is enabled
 
 The IAM trust is scoped to the exact repository and GitHub environment. Protect
@@ -80,6 +81,19 @@ The demo cost profile uses two public subnets for the ALB and Fargate tasks,
 which have public IPs for outbound image and AWS API access. The task security
 group accepts port 3000 only from the ALB. RDS is not public and exists in two
 isolated subnets. No NAT gateway is provisioned.
+
+This staging template is intentionally disposable: database deletion protection
+is off, deleting the stack does not retain a final RDS snapshot, and ECR images
+are removed with their repositories. Do not use these deletion settings for the
+production stack. To stop recurring staging charges after acceptance, delete the
+service stack first and then the foundation stack:
+
+```bash
+aws cloudformation delete-stack --stack-name imkan-staging-service
+aws cloudformation wait stack-delete-complete --stack-name imkan-staging-service
+aws cloudformation delete-stack --stack-name imkan-staging-foundation
+aws cloudformation wait stack-delete-complete --stack-name imkan-staging-foundation
+```
 
 ## 4. Create the first manager exactly once
 
