@@ -1,0 +1,44 @@
+name: Diagnose staging migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_run_id:
+        description: GitHub deployment run ID that started the migration task
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: imkan-diagnose-${{ github.run_id }}
+
+      - name: Read the migration task log
+        env:
+          DEPLOYMENT_RUN_ID: ${{ inputs.deployment_run_id }}
+        run: |
+          case "$DEPLOYMENT_RUN_ID" in
+            *[!0-9]*|"") echo "deployment_run_id must be numeric" >&2; exit 1 ;;
+          esac
+          TASK_ARN=$(aws ecs list-tasks \
+            --cluster imkan-staging-cluster \
+            --started-by "github-$DEPLOYMENT_RUN_ID" \
+            --desired-status STOPPED \
+            --query 'taskArns[0]' --output text)
+          test -n "$TASK_ARN" && test "$TASK_ARN" != "None"
+          TASK_ID=${TASK_ARN##*/}
+          aws logs get-log-events \
+            --log-group-name /ecs/imkan-staging/migration \
+            --log-stream-name "migration/migration/$TASK_ID" \
+            --query 'events[].message' --output text
