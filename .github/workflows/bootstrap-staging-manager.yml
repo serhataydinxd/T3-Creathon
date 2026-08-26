@@ -1,0 +1,134 @@
+name: Bootstrap staging manager
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: imkan-staging-manager-bootstrap
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ENVIRONMENT_NAME: imkan-staging
+  FOUNDATION_STACK: imkan-staging-foundation
+  SERVICE_STACK: imkan-staging-service
+  BOOTSTRAP_STACK: imkan-staging-bootstrap-manager
+  CFN_ROLE_ARN: ${{ vars.AWS_CLOUDFORMATION_ROLE_ARN }}
+  OIDC_SUBJECT: ${{ vars.OIDC_SUBJECT }}
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate ephemeral manager inputs
+        env:
+          MANAGER_EMAIL: ${{ secrets.BOOTSTRAP_MANAGER_EMAIL }}
+          MANAGER_NAME: ${{ secrets.BOOTSTRAP_MANAGER_NAME }}
+          MANAGER_PASSWORD: ${{ secrets.BOOTSTRAP_MANAGER_PASSWORD }}
+        run: |
+          test -n "$MANAGER_EMAIL"
+          test -n "$MANAGER_NAME"
+          test -n "$MANAGER_PASSWORD"
+
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: imkan-bootstrap-${{ github.run_id }}
+
+      - name: Keep deployment roles current
+        run: |
+          aws cloudformation deploy \
+            --stack-name "$ENVIRONMENT_NAME-oidc" \
+            --template-file infra/aws/github-oidc-role.json \
+            --role-arn "$CFN_ROLE_ARN" \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName="$ENVIRONMENT_NAME" \
+              GitHubSubject="$OIDC_SUBJECT"
+
+      - name: Create temporary manager secret
+        id: secret
+        env:
+          MANAGER_EMAIL: ${{ secrets.BOOTSTRAP_MANAGER_EMAIL }}
+          MANAGER_NAME: ${{ secrets.BOOTSTRAP_MANAGER_NAME }}
+          MANAGER_PASSWORD: ${{ secrets.BOOTSTRAP_MANAGER_PASSWORD }}
+        run: |
+          SECRET_NAME="$ENVIRONMENT_NAME/bootstrap-manager-$GITHUB_RUN_ID"
+          SECRET_JSON=$(jq -cn \
+            --arg email "$MANAGER_EMAIL" \
+            --arg name "$MANAGER_NAME" \
+            --arg password "$MANAGER_PASSWORD" \
+            '{email:$email,name:$name,password:$password}')
+          SECRET_ARN=$(aws secretsmanager create-secret \
+            --name "$SECRET_NAME" \
+            --description "Ephemeral IMKAN staging manager bootstrap" \
+            --secret-string "$SECRET_JSON" \
+            --query ARN --output text)
+          echo "arn=$SECRET_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Register one-time bootstrap task
+        env:
+          SECRET_ARN: ${{ steps.secret.outputs.arn }}
+        run: |
+          MIGRATION_TAG=$(aws cloudformation describe-stacks --stack-name "$SERVICE_STACK" \
+            --query "Stacks[0].Parameters[?ParameterKey=='MigrationImageTag'].ParameterValue | [0]" --output text)
+          aws cloudformation deploy \
+            --stack-name "$BOOTSTRAP_STACK" \
+            --template-file infra/aws/bootstrap-manager.json \
+            --role-arn "$CFN_ROLE_ARN" \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName="$ENVIRONMENT_NAME" \
+              MigrationImageTag="$MIGRATION_TAG" \
+              BootstrapSecretArn="$SECRET_ARN"
+
+      - name: Create the first manager
+        run: |
+          output() {
+            aws cloudformation describe-stacks --stack-name "$FOUNDATION_STACK" \
+              --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue | [0]" --output text
+          }
+          CLUSTER=$(output ClusterName)
+          SUBNET_A=$(output PublicSubnetAId)
+          SUBNET_B=$(output PublicSubnetBId)
+          TASK_SG=$(output EcsSecurityGroupId)
+          TASK_DEFINITION=$(aws cloudformation describe-stacks --stack-name "$BOOTSTRAP_STACK" \
+            --query "Stacks[0].Outputs[?OutputKey=='BootstrapTaskDefinitionArn'].OutputValue | [0]" --output text)
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASK_DEFINITION" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_A,$SUBNET_B],securityGroups=[$TASK_SG],assignPublicIp=ENABLED}" \
+            --started-by "github-$GITHUB_RUN_ID" \
+            --query 'tasks[0].taskArn' --output text)
+          test "$TASK_ARN" != "None"
+          timeout 10m aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[?name==`bootstrap-manager`].exitCode | [0]' --output text)
+          test "$EXIT_CODE" = "0"
+
+      - name: Delete ephemeral bootstrap resources
+        if: always()
+        env:
+          SECRET_ARN: ${{ steps.secret.outputs.arn }}
+        run: |
+          if aws cloudformation describe-stacks --stack-name "$BOOTSTRAP_STACK" >/dev/null 2>&1; then
+            aws cloudformation delete-stack --stack-name "$BOOTSTRAP_STACK"
+            aws cloudformation wait stack-delete-complete --stack-name "$BOOTSTRAP_STACK"
+          fi
+          if [ -n "$SECRET_ARN" ]; then
+            aws secretsmanager delete-secret \
+              --secret-id "$SECRET_ARN" \
+              --force-delete-without-recovery
+          fi

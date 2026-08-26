@@ -15,9 +15,23 @@ type ServiceTemplate = {
   };
 };
 
+type BootstrapTemplate = {
+  Resources: {
+    BootstrapTaskDefinition: {
+      Properties: {
+        ContainerDefinitions: Array<{ Environment: EnvironmentEntry[] }>;
+      };
+    };
+  };
+};
+
 const template = JSON.parse(
   readFileSync(new URL("../infra/aws/service.json", import.meta.url), "utf8"),
 ) as ServiceTemplate;
+
+const bootstrapTemplate = JSON.parse(
+  readFileSync(new URL("../infra/aws/bootstrap-manager.json", import.meta.url), "utf8"),
+) as BootstrapTemplate;
 
 describe("AWS web task configuration", () => {
   it("binds Next.js to every interface when probing it over loopback", () => {
@@ -29,5 +43,18 @@ describe("AWS web task configuration", () => {
 
     expect(hostname?.Value).toBe("0.0.0.0");
     expect(container.HealthCheck.Command.join(" ")).toContain("127.0.0.1:3000");
+  });
+});
+
+describe("AWS manager bootstrap configuration", () => {
+  it("uses the bundled RDS trust store for its TLS database connection", () => {
+    const environment =
+      bootstrapTemplate.Resources.BootstrapTaskDefinition.Properties.ContainerDefinitions[0].Environment;
+
+    expect(environment).toContainEqual({
+      Name: "DATABASE_CA_CERT",
+      Value: "/app/rds-ca.pem",
+    });
+    expect(environment).toContainEqual({ Name: "DATABASE_SSL", Value: "true" });
   });
 });

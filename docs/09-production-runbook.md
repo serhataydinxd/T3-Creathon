@@ -99,6 +99,12 @@ aws cloudformation wait stack-delete-complete --stack-name imkan-staging-foundat
 
 ## 4. Create the first manager exactly once
 
+For staging, prefer the **Bootstrap staging manager** workflow. Store
+`BOOTSTRAP_MANAGER_EMAIL`, `BOOTSTRAP_MANAGER_NAME` and a unique 20+ character
+`BOOTSTRAP_MANAGER_PASSWORD` in the GitHub `staging` environment, then dispatch
+the workflow once. It creates and force-deletes an ephemeral Secrets Manager
+secret and deletes its temporary CloudFormation stack after the task exits.
+
 Never run `npm run db:seed` against staging or production. Create an ephemeral
 Secrets Manager value containing only:
 
