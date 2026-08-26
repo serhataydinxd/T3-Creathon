@@ -147,7 +147,6 @@ jobs:
           fi
 
       - name: Register the migration release without changing web traffic
-        id: release_state
         env:
           DESIRED_COUNT: ${{ inputs.desired_count }}
         run: |
@@ -162,8 +161,11 @@ jobs:
             CURRENT_WEB_TAG="$WEB_TAG"
             CURRENT_DESIRED=0
           fi
-          echo "previous_web_tag=$CURRENT_WEB_TAG" >> "$GITHUB_OUTPUT"
-          echo "previous_desired_count=$CURRENT_DESIRED" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT_DESIRED" = "0" ]; then
+            # With no live traffic, stage the new web image before migration so
+            # ECS never uses an obsolete image as the first rollback baseline.
+            CURRENT_WEB_TAG="$WEB_TAG"
+          fi
           aws cloudformation deploy \
             --stack-name "$SERVICE_STACK" \
             --template-file infra/aws/service.json \
