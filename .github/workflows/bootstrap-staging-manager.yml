@@ -119,6 +119,14 @@ jobs:
             --query 'tasks[0].containers[?name==`bootstrap-manager`].exitCode | [0]' --output text)
           test "$EXIT_CODE" = "0"
 
+      - name: Report bootstrap failure details
+        if: failure()
+        run: |
+          aws cloudformation describe-stack-events \
+            --stack-name "$BOOTSTRAP_STACK" \
+            --query 'StackEvents[?ResourceStatus==`CREATE_FAILED` || ResourceStatus==`UPDATE_FAILED`].[Timestamp,LogicalResourceId,ResourceType,ResourceStatusReason]' \
+            --output table || true
+
       - name: Delete ephemeral bootstrap resources
         if: always()
         env:

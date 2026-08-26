@@ -66,4 +66,12 @@ describe("AWS manager bootstrap configuration", () => {
   it("acknowledges the temporary IAM policy when deploying the bootstrap stack", () => {
     expect(bootstrapWorkflow).toContain("--capabilities CAPABILITY_IAM");
   });
+
+  it("reports bootstrap stack events before deleting ephemeral resources", () => {
+    const reportIndex = bootstrapWorkflow.indexOf("Report bootstrap failure details");
+    const cleanupIndex = bootstrapWorkflow.indexOf("Delete ephemeral bootstrap resources");
+
+    expect(reportIndex).toBeGreaterThan(-1);
+    expect(cleanupIndex).toBeGreaterThan(reportIndex);
+  });
 });
