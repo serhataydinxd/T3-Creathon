@@ -50,6 +50,7 @@
             { "Name": "DB_HOST", "Value": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseEndpoint" } } },
             { "Name": "DB_NAME", "Value": "imkan" },
             { "Name": "DB_PORT", "Value": "5432" },
+            { "Name": "HOSTNAME", "Value": "0.0.0.0" },
             { "Name": "NODE_ENV", "Value": "production" },
             { "Name": "PORT", "Value": "3000" }
           ],
