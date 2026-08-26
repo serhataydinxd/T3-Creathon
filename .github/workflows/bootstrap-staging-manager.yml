@@ -87,6 +87,7 @@ jobs:
             --stack-name "$BOOTSTRAP_STACK" \
             --template-file infra/aws/bootstrap-manager.json \
             --role-arn "$CFN_ROLE_ARN" \
+            --capabilities CAPABILITY_IAM \
             --no-fail-on-empty-changeset \
             --parameter-overrides \
               EnvironmentName="$ENVIRONMENT_NAME" \

@@ -33,6 +33,11 @@ const bootstrapTemplate = JSON.parse(
   readFileSync(new URL("../infra/aws/bootstrap-manager.json", import.meta.url), "utf8"),
 ) as BootstrapTemplate;
 
+const bootstrapWorkflow = readFileSync(
+  new URL("../.github/workflows/bootstrap-staging-manager.yml", import.meta.url),
+  "utf8",
+);
+
 describe("AWS web task configuration", () => {
   it("binds Next.js to every interface when probing it over loopback", () => {
     const container =
@@ -56,5 +61,9 @@ describe("AWS manager bootstrap configuration", () => {
       Value: "/app/rds-ca.pem",
     });
     expect(environment).toContainEqual({ Name: "DATABASE_SSL", Value: "true" });
+  });
+
+  it("acknowledges the temporary IAM policy when deploying the bootstrap stack", () => {
+    expect(bootstrapWorkflow).toContain("--capabilities CAPABILITY_IAM");
   });
 });
