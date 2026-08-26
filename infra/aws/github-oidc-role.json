@@ -43,7 +43,7 @@
               "Effect": "Allow",
               "Action": [
                 "iam:AttachRolePolicy", "iam:CreateRole", "iam:DeleteRole", "iam:DeleteRolePolicy",
-                "iam:DetachRolePolicy", "iam:GetRole", "iam:PassRole", "iam:PutRolePolicy",
+                "iam:DetachRolePolicy", "iam:GetRole", "iam:GetRolePolicy", "iam:PassRole", "iam:PutRolePolicy",
                 "iam:TagRole", "iam:UntagRole"
               ],
               "Resource": { "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/imkan/*" }

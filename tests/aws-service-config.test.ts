@@ -25,6 +25,18 @@ type BootstrapTemplate = {
   };
 };
 
+type OidcTemplate = {
+  Resources: {
+    CloudFormationExecutionRole: {
+      Properties: {
+        Policies: Array<{
+          PolicyDocument: { Statement: Array<{ Action: string[] }> };
+        }>;
+      };
+    };
+  };
+};
+
 const template = JSON.parse(
   readFileSync(new URL("../infra/aws/service.json", import.meta.url), "utf8"),
 ) as ServiceTemplate;
@@ -37,6 +49,10 @@ const bootstrapWorkflow = readFileSync(
   new URL("../.github/workflows/bootstrap-staging-manager.yml", import.meta.url),
   "utf8",
 );
+
+const oidcTemplate = JSON.parse(
+  readFileSync(new URL("../infra/aws/github-oidc-role.json", import.meta.url), "utf8"),
+) as OidcTemplate;
 
 describe("AWS web task configuration", () => {
   it("binds Next.js to every interface when probing it over loopback", () => {
@@ -73,5 +89,15 @@ describe("AWS manager bootstrap configuration", () => {
 
     expect(reportIndex).toBeGreaterThan(-1);
     expect(cleanupIndex).toBeGreaterThan(reportIndex);
+  });
+
+  it("lets CloudFormation reconcile the temporary inline role policy", () => {
+    const actions =
+      oidcTemplate.Resources.CloudFormationExecutionRole.Properties.Policies[0]
+        .PolicyDocument.Statement[0].Action;
+
+    expect(actions).toContain("iam:GetRolePolicy");
+    expect(actions).toContain("iam:PutRolePolicy");
+    expect(actions).toContain("iam:DeleteRolePolicy");
   });
 });
