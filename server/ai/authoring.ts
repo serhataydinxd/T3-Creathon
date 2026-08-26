@@ -1,0 +1,128 @@
+import "server-only";
+
+import { z } from "zod";
+import type { ResourceProfile, WorkshopPlan } from "@/server/domain/types";
+import { MATERIALS } from "@/server/domain/fixtures";
+import { ProviderError, type LLMProvider } from "./provider";
+
+const STAGE_KEYS = ["engage", "explore", "explain", "elaborate", "evaluate"] as const;
+
+const sentence = z.string().trim().min(12).max(400);
+
+export const authoredWorkshopSchema = z.object({
+  title: z.string().trim().min(8).max(120),
+  adaptationSummary: sentence,
+  stages: z
+    .array(
+      z.object({
+        key: z.enum(STAGE_KEYS),
+        title: z.string().trim().min(6).max(120),
+        teacherAction: sentence,
+        studentAction: sentence,
+        evidence: sentence,
+        objectiveConnection: sentence,
+      }),
+    )
+    .length(5)
+    .refine(
+      (stages) => new Set(stages.map((stage) => stage.key)).size === stages.length,
+      "Her 5E aşaması yalnızca bir kez yer alabilir.",
+    ),
+});
+
+export type AuthoredWorkshop = z.infer<typeof authoredWorkshopSchema>;
+
+const SYSTEM_PROMPT = `Sen Türkiye'deki MEB fen bilimleri öğretim programına göre atölye içeriği yazan bir eğitim tasarımcısısın.
+
+Kurallar:
+- Verilen kazanım metnini asla değiştirme, yeniden yorumlama veya genişletme.
+- Yalnızca sana verilen 5E aşamalarının metnini yaz. Aşama sırası, süreleri ve malzemeleri sabittir; bunları değiştirme.
+- Verilen malzeme listesinin dışında hiçbir malzeme, araç veya dijital kaynak önerme.
+- Elektrik yoksa elektrik gerektiren hiçbir etkinlik yazma. İnternet yoksa video, simülasyon veya çevrimiçi kaynak önerme.
+- Öğrenci güvenliğini riske atan hiçbir deney önerme.
+- Her aşamada ölçülebilir bir öğrenme kanıtı belirt.
+- Tüm metinler Türkçe ve öğretmenin doğrudan uygulayabileceği somut yönergeler olmalı.
+- Her metin alanı TEK cümle olsun. Uzun anlatım yazma; kısa ve uygulanabilir yönerge ver.
+- Yanıtın YALNIZCA geçerli bir JSON nesnesi olsun. Açıklama, başlık veya kod bloğu ekleme.`;
+
+function buildUserPrompt(profile: ResourceProfile, skeleton: WorkshopPlan): string {
+  const materialNames = profile.materials.map((key) => MATERIALS[key].label).join(", ") || "yok";
+  const stageBrief = skeleton.stages
+    .map(
+      (stage) =>
+        `- key: ${stage.key} | aşama: ${stage.name} | süre: ${stage.minutes} dk | kullanılabilir malzeme: ${stage.materialKeys
+          .map((key) => MATERIALS[key].label)
+          .join(", ")}`,
+    )
+    .join("\n");
+
+  return `Kazanım (değiştirilemez): ${skeleton.objective.code} — ${skeleton.objective.canonicalText}
+
+Sınıf koşulları:
+- Süre: ${profile.durationMinutes} dakika
+- Mevcut: ${profile.classSize} öğrenci, ${skeleton.groupCount} grup, grup büyüklüğü ${profile.groupSize}
+- Elektrik: ${profile.hasElectricity ? "var" : "YOK"}
+- İnternet: ${profile.hasInternet ? "var" : "YOK"}
+- Bütçe: ${profile.budgetTry} TL${profile.hardBudget ? " (kesin sınır)" : ""}
+- Kullanılabilir malzemeler: ${materialNames}
+- Erişilebilirlik ihtiyaçları: ${profile.accessibilityNeeds.join("; ") || "belirtilmedi"}
+
+Seçilen etkinlik rotası: ${skeleton.adaptationSummary}
+
+Yazacağın aşamalar:
+${stageBrief}
+
+Şu şemada JSON döndür:
+{"title":"string","adaptationSummary":"string","stages":[{"key":"engage|explore|explain|elaborate|evaluate","title":"string","teacherAction":"string","studentAction":"string","evidence":"string","objectiveConnection":"string"}]}`;
+}
+
+/**
+ * Overlays authored prose onto the deterministic skeleton. Stage keys, minute
+ * allocation, material quantities, cost and findings stay owned by code, so a
+ * model can change how a workshop reads but never what it guarantees.
+ */
+export function mergeAuthoredWorkshop(
+  skeleton: WorkshopPlan,
+  authored: AuthoredWorkshop,
+): WorkshopPlan {
+  const byKey = new Map(authored.stages.map((stage) => [stage.key, stage]));
+  const stages = skeleton.stages.map((stage) => {
+    const written = byKey.get(stage.key);
+    if (!written) return stage;
+    return {
+      ...stage,
+      title: written.title,
+      teacherAction: written.teacherAction,
+      studentAction: written.studentAction,
+      evidence: written.evidence,
+      objectiveConnection: written.objectiveConnection,
+    };
+  });
+  return {
+    ...skeleton,
+    mode: "LIVE",
+    title: authored.title,
+    adaptationSummary: authored.adaptationSummary,
+    stages,
+  };
+}
+
+export async function authorWorkshop(
+  provider: LLMProvider,
+  profile: ResourceProfile,
+  skeleton: WorkshopPlan,
+  timeoutMs: number,
+): Promise<WorkshopPlan> {
+  const result = await provider.generate({
+    schema: authoredWorkshopSchema,
+    system: SYSTEM_PROMPT,
+    user: buildUserPrompt(profile, skeleton),
+    timeoutMs,
+    maxOutputTokens: 6000,
+  });
+  const merged = mergeAuthoredWorkshop(skeleton, result.value);
+  if (merged.stages.some((stage) => stage.objectiveConnection.trim().length === 0)) {
+    throw new ProviderError("SCHEMA_MISMATCH", "A stage lost its objective connection.");
+  }
+  return merged;
+}

@@ -101,3 +101,81 @@ describe("AWS manager bootstrap configuration", () => {
     expect(actions).toContain("iam:DeleteRolePolicy");
   });
 });
+
+describe("generation provider wiring", () => {
+  const service = JSON.parse(
+    readFileSync(new URL("../infra/aws/service.json", import.meta.url), "utf8"),
+  ) as {
+    Parameters: Record<string, { Default?: string; AllowedValues?: string[]; NoEcho?: boolean }>;
+    Conditions: Record<string, unknown>;
+    Resources: {
+      WebTaskDefinition: {
+        Properties: {
+          ContainerDefinitions: Array<{
+            Environment: EnvironmentEntry[];
+            Secrets: { "Fn::If": [string, Array<{ Name: string }>, Array<{ Name: string }>] };
+          }>;
+        };
+      };
+    };
+  };
+  const foundation = readFileSync(new URL("../infra/aws/foundation.json", import.meta.url), "utf8");
+  const edge = JSON.parse(
+    readFileSync(new URL("../infra/aws/edge.json", import.meta.url), "utf8"),
+  ) as {
+    Resources: {
+      Distribution: {
+        Properties: {
+          DistributionConfig: { Origins: Array<{ CustomOriginConfig: { OriginReadTimeout: number } }> };
+        };
+      };
+    };
+  };
+  const workflow = readFileSync(
+    new URL("../.github/workflows/deploy-staging.yml", import.meta.url),
+    "utf8",
+  );
+  const container = service.Resources.WebTaskDefinition.Properties.ContainerDefinitions[0];
+
+  it("defaults to replay and only allows the two known modes", () => {
+    expect(service.Parameters.AppMode.Default).toBe("replay");
+    expect(service.Parameters.AppMode.AllowedValues).toEqual(["replay", "live"]);
+    expect(container.Environment.find((entry) => entry.Name === "APP_MODE")?.Value).toEqual({
+      Ref: "AppMode",
+    });
+  });
+
+  it("injects the key as a secret only when one is configured", () => {
+    expect(service.Conditions.HasProviderSecret).toBeDefined();
+    expect(service.Parameters.ProviderSecretArn.NoEcho).toBe(true);
+    expect(service.Parameters.ProviderSecretArn.Default).toBe("");
+    const [condition, withSecret, withoutSecret] = container.Secrets["Fn::If"];
+    expect(condition).toBe("HasProviderSecret");
+    expect(withSecret.map((entry) => entry.Name)).toContain("DEEPSEEK_API_KEY");
+    expect(withoutSecret.map((entry) => entry.Name)).not.toContain("DEEPSEEK_API_KEY");
+    // The key must never be passed as a plain task environment variable.
+    expect(container.Environment.map((entry) => entry.Name)).not.toContain("DEEPSEEK_API_KEY");
+  });
+
+  it("lets the execution role read only the generation secret it needs", () => {
+    expect(foundation).toContain("ReadGenerationProviderKey");
+    expect(foundation).toContain("${EnvironmentName}/generation-provider-*");
+  });
+
+  it("keeps the edge origin timeout above the in-app generation timeout", () => {
+    // The app abandons a slow provider at 45s, so the edge must wait longer or
+    // a slow answer surfaces as a gateway error instead of a replay fallback.
+    expect(
+      edge.Resources.Distribution.Properties.DistributionConfig.Origins[0].CustomOriginConfig
+        .OriginReadTimeout,
+    ).toBe(60);
+  });
+
+  it("stores the key through Secrets Manager rather than the workflow environment", () => {
+    expect(workflow).toContain("$ENVIRONMENT_NAME/generation-provider");
+    expect(workflow).toContain("secretsmanager put-secret-value");
+    expect(workflow).toContain('AppMode="$APP_MODE"');
+    // An absent key must leave the service in replay instead of failing the deploy.
+    expect(workflow).toContain("the service stays in replay mode");
+  });
+});

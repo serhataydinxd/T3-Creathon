@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
 import { createDraft } from "@/server/domain/workshops";
-import { resourceProfileSchema } from "@/server/domain/schemas";
+import { draftRequestSchema } from "@/server/domain/schemas";
 import { isSameOrigin, readBoundedJson } from "@/server/http/request";
 
 export async function POST(request: Request) {
@@ -21,10 +21,11 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error && error.message === "BODY_TOO_LARGE" ? "İstek gövdesi çok büyük." : "Geçersiz JSON gövdesi." }, { status: error instanceof Error && error.message === "BODY_TOO_LARGE" ? 413 : 400 });
   }
-  const parsed = resourceProfileSchema.safeParse(body);
+  const parsed = draftRequestSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Geçersiz atölye koşulları." }, { status: 400 });
   try {
-    const id = await createDraft(user, parsed.data, idempotencyKey);
+    const { authored, ...profile } = parsed.data;
+    const id = await createDraft(user, profile, idempotencyKey, authored);
     return NextResponse.json({ id }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "UNKNOWN";

@@ -1,3 +1,4 @@
+import { authoredWorkshopSchema } from "@/server/ai/authoring";
 import { z } from "zod";
 
 export const resourceProfileSchema = z.object({
@@ -15,4 +16,10 @@ export const resourceProfileSchema = z.object({
     .max(8)
     .refine((items) => new Set(items).size === items.length, "Malzemeler tekrarlanamaz."),
   accessibilityNeeds: z.array(z.string().trim().max(160)).max(8),
+});
+
+// A draft may carry the prose the content expert actually reviewed. Everything
+// that carries a guarantee is still re-derived server-side from the profile.
+export const draftRequestSchema = resourceProfileSchema.extend({
+  authored: authoredWorkshopSchema.optional(),
 });

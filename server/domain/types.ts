@@ -55,7 +55,7 @@ export type Stage = {
 
 export type WorkshopPlan = {
   id: string;
-  mode: "REPLAY";
+  mode: "REPLAY" | "LIVE";
   title: string;
   objective: {
     id: string;

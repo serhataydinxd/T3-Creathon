@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateWorkshop } from "@/server/domain/generator";
+import { generateWorkshopPlan } from "@/server/ai/generate";
 import { resourceProfileSchema } from "@/server/domain/schemas";
 import { getCurrentUser } from "@/server/auth/session";
 import { isSameOrigin, readBoundedJson } from "@/server/http/request";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    return NextResponse.json(generateWorkshop(parsed.data));
+    return NextResponse.json(await generateWorkshopPlan(parsed.data));
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Atölye üretilemedi." },

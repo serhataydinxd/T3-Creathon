@@ -28,7 +28,7 @@ import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain
 
 type View = "configure" | "generating" | "result";
 
-export function WorkshopLab() {
+export function WorkshopLab({ live = false }: { live?: boolean }) {
   const router = useRouter();
   const [view, setView] = useState<View>("configure");
   const [profile, setProfile] = useState<ResourceProfile>(DEFAULT_PROFILE);
@@ -87,7 +87,26 @@ export function WorkshopLab() {
       const response = await fetch("/api/workshops", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify(plan.profile),
+        body: JSON.stringify({
+          ...plan.profile,
+          // Persist the prose the expert reviewed; the server re-derives
+          // everything that carries a guarantee.
+          authored:
+            plan.mode === "LIVE"
+              ? {
+                  title: plan.title,
+                  adaptationSummary: plan.adaptationSummary,
+                  stages: plan.stages.map((stage) => ({
+                    key: stage.key,
+                    title: stage.title,
+                    teacherAction: stage.teacherAction,
+                    studentAction: stage.studentAction,
+                    evidence: stage.evidence,
+                    objectiveConnection: stage.objectiveConnection,
+                  })),
+                }
+              : undefined,
+        }),
       });
       const body = (await response.json()) as { id?: string; error?: string };
       if (!response.ok || !body.id) throw new Error(body.error ?? "Taslak kaydedilemedi.");
@@ -104,7 +123,7 @@ export function WorkshopLab() {
       <section className="page lab-page">
         <div className="lab-heading">
           <div><span className="overline">Atölye laboratuvarı</span><h1>Koşulları tanımla</h1></div>
-          <span className="mode-badge"><span /> REPLAY · güvenli demo</span>
+          <span className="mode-badge"><span /> {live ? "CANLI ÜRETİM · doğrulamalı" : "REPLAY · güvenli demo"}</span>
         </div>
 
         <div className="configuration-grid">

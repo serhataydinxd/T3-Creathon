@@ -9,6 +9,12 @@ on:
         default: "1"
         type: choice
         options: ["1", "2"]
+      app_mode:
+        description: Generation mode for the deployed service
+        required: true
+        default: replay
+        type: choice
+        options: ["replay", "live"]
 
 permissions:
   contents: read
@@ -170,10 +176,38 @@ jobs:
             docker push "$MIGRATION_REPOSITORY:$MIGRATION_TAG"
           fi
 
+      - name: Store the generation provider key
+        id: provider_secret
+        env:
+          PROVIDER_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          if [ -z "$PROVIDER_API_KEY" ]; then
+            echo "No provider key configured; the service stays in replay mode."
+            echo "arn=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SECRET_NAME="$ENVIRONMENT_NAME/generation-provider"
+          SECRET_JSON=$(jq -cn --arg apiKey "$PROVIDER_API_KEY" '{apiKey:$apiKey}')
+          if ARN=$(aws secretsmanager describe-secret --secret-id "$SECRET_NAME" \
+            --query ARN --output text 2>/dev/null); then
+            aws secretsmanager put-secret-value \
+              --secret-id "$SECRET_NAME" \
+              --secret-string "$SECRET_JSON" >/dev/null
+          else
+            ARN=$(aws secretsmanager create-secret \
+              --name "$SECRET_NAME" \
+              --description "IMKAN staging generation provider key" \
+              --secret-string "$SECRET_JSON" \
+              --query ARN --output text)
+          fi
+          echo "arn=$ARN" >> "$GITHUB_OUTPUT"
+
       - name: Register the migration release without changing web traffic
         env:
           CLUSTER: ${{ steps.foundation.outputs.cluster }}
           DESIRED_COUNT: ${{ inputs.desired_count }}
+          APP_MODE: ${{ inputs.app_mode }}
+          PROVIDER_SECRET_ARN: ${{ steps.provider_secret.outputs.arn }}
         run: |
           WEB_TAG="web-$GITHUB_SHA"
           MIGRATION_TAG="migration-$GITHUB_SHA"
@@ -201,7 +235,9 @@ jobs:
               EnvironmentName="$ENVIRONMENT_NAME" \
               WebImageTag="$CURRENT_WEB_TAG" \
               MigrationImageTag="$MIGRATION_TAG" \
-              DesiredCount="$CURRENT_DESIRED"
+              DesiredCount="$CURRENT_DESIRED" \
+              AppMode="$APP_MODE" \
+              ProviderSecretArn="$PROVIDER_SECRET_ARN"
 
       - name: Run database migrations
         env:
@@ -246,6 +282,8 @@ jobs:
       - name: Deploy the web image after migrations succeed
         env:
           DESIRED_COUNT: ${{ inputs.desired_count }}
+          APP_MODE: ${{ inputs.app_mode }}
+          PROVIDER_SECRET_ARN: ${{ steps.provider_secret.outputs.arn }}
         run: |
           aws cloudformation deploy \
             --stack-name "$SERVICE_STACK" \
@@ -256,7 +294,9 @@ jobs:
               EnvironmentName="$ENVIRONMENT_NAME" \
               WebImageTag="web-$GITHUB_SHA" \
               MigrationImageTag="migration-$GITHUB_SHA" \
-              DesiredCount="$DESIRED_COUNT"
+              DesiredCount="$DESIRED_COUNT" \
+              AppMode="$APP_MODE" \
+              ProviderSecretArn="$PROVIDER_SECRET_ARN"
 
       - name: Smoke the deployed health endpoint
         env:

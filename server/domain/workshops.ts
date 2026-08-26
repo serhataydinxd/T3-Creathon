@@ -16,6 +16,7 @@ import type { AuthUser } from "@/server/auth/session";
 import type { ResourceProfile, WorkshopPlan } from "./types";
 import { DEMO_OBJECTIVE } from "./fixtures";
 import { generateWorkshop } from "./generator";
+import { mergeAuthoredWorkshop, type AuthoredWorkshop } from "@/server/ai/authoring";
 
 export type WorkshopRecord = {
   id: string;
@@ -33,13 +34,21 @@ function hashJson(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
-export async function createDraft(user: AuthUser, profile: ResourceProfile, idempotencyKey: string) {
+export async function createDraft(
+  user: AuthUser,
+  profile: ResourceProfile,
+  idempotencyKey: string,
+  authored?: AuthoredWorkshop,
+) {
   if (!(["content_expert", "pedagogue"] as AuthUser["role"][]).includes(user.role)) {
     throw new Error("FORBIDDEN");
   }
   const db = getDb();
   const requestHash = hashJson(profile);
-  const plan = generateWorkshop(profile);
+  // The skeleton is always recomputed here, so authored prose can change how a
+  // draft reads but never its stages, minutes, materials, cost or findings.
+  const skeleton = generateWorkshop(profile);
+  const plan = authored ? mergeAuthoredWorkshop(skeleton, authored) : skeleton;
   if (plan.findings.some((finding) => finding.severity === "blocker")) throw new Error("PLAN_BLOCKED");
 
   return db.transaction(async (tx) => {
@@ -52,7 +61,7 @@ export async function createDraft(user: AuthUser, profile: ResourceProfile, idem
 
     const [insertedRun] = await tx
       .insert(generationRuns)
-      .values({ objectiveId: objective.id, requestedBy: user.id, idempotencyKey, requestHash, mode: "replay", status: "ready_for_review", request: profile, objectiveSnapshot: plan.objective })
+      .values({ objectiveId: objective.id, requestedBy: user.id, idempotencyKey, requestHash, mode: plan.mode === "LIVE" ? "live" : "replay", status: "ready_for_review", request: profile, objectiveSnapshot: plan.objective })
       .onConflictDoNothing({ target: [generationRuns.requestedBy, generationRuns.idempotencyKey] })
       .returning({ id: generationRuns.id });
     if (!insertedRun) {

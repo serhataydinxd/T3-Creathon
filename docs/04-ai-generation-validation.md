@@ -1,5 +1,30 @@
 # AI Generation and Validation
 
+## Implemented mode
+
+`APP_MODE=live` plus a provider key enables provider-backed authoring; anything
+else stays deterministic. The provider only ever writes prose: stage titles,
+teacher and student actions, learning evidence and the objective connection.
+Stage keys, minute allocation, group count, the material list, cost and every
+finding are recomputed in code, so a model can change how a workshop reads but
+never what it guarantees. `createDraft` re-derives the skeleton server-side and
+overlays only the reviewed prose, which is why a saved package cannot inherit a
+model's mistake about materials or budget.
+
+Any provider failure — stall, empty completion, unparsable JSON, contract breach
+— degrades to the deterministic plan and reports `AI_FALLBACK_APPLIED` as a
+warning. Generation therefore always returns a usable workshop.
+
+`deepseek-v4-flash` is a reasoning model that bills reasoning against
+`max_tokens` and expands its reasoning to fill the budget it is given, so the
+budget carries deliberate headroom above the expected document size. Measured
+latency is bimodal: roughly 20-30s when it answers, or a stall. A single attempt
+is therefore capped well below the overall deadline so a stall becomes a retry
+rather than a spent budget, and the deadline stays below the CloudFront origin
+read timeout so a slow answer degrades in-app instead of at the edge. Observed
+live success against the free tier is well under half; treat live generation as
+a demonstration of capability, not as a dependency.
+
 ## Provider contract
 
 P0 implements one provider and a replay provider:

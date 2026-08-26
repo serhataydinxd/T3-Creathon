@@ -153,8 +153,11 @@
               },
               {
                 "Effect": "Allow",
-                "Action": ["secretsmanager:CreateSecret", "secretsmanager:DeleteSecret", "secretsmanager:DescribeSecret", "secretsmanager:TagResource"],
-                "Resource": { "Fn::Sub": "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvironmentName}/bootstrap-manager-*" }
+                "Action": ["secretsmanager:CreateSecret", "secretsmanager:DeleteSecret", "secretsmanager:DescribeSecret", "secretsmanager:PutSecretValue", "secretsmanager:TagResource"],
+                "Resource": [
+                  { "Fn::Sub": "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvironmentName}/bootstrap-manager-*" },
+                  { "Fn::Sub": "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${EnvironmentName}/generation-provider-*" }
+                ]
               }
             ]
           }

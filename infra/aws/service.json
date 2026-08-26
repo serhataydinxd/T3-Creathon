@@ -15,12 +15,28 @@
       "Type": "String",
       "AllowedPattern": "migration-[a-f0-9]{7,64}"
     },
+    "AppMode": {
+      "Type": "String",
+      "Default": "replay",
+      "AllowedValues": ["replay", "live"],
+      "Description": "live enables provider-backed generation; the app falls back to replay on any failure."
+    },
+    "ProviderSecretArn": {
+      "Type": "String",
+      "Default": "",
+      "NoEcho": true,
+      "AllowedPattern": "(arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:.+)?",
+      "Description": "Secrets Manager ARN holding the generation API key. Empty keeps the service in replay."
+    },
     "DesiredCount": {
       "Type": "Number",
       "Default": 1,
       "MinValue": 0,
       "MaxValue": 4
     }
+  },
+  "Conditions": {
+    "HasProviderSecret": { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "ProviderSecretArn" }, ""] }] }
   },
   "Resources": {
     "WebTaskDefinition": {
@@ -44,7 +60,7 @@
             ]
           },
           "Environment": [
-            { "Name": "APP_MODE", "Value": "replay" },
+            { "Name": "APP_MODE", "Value": { "Ref": "AppMode" } },
             { "Name": "DATABASE_CA_CERT", "Value": "/app/rds-ca.pem" },
             { "Name": "DATABASE_SSL", "Value": "true" },
             { "Name": "DB_HOST", "Value": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseEndpoint" } } },
@@ -54,20 +70,43 @@
             { "Name": "NODE_ENV", "Value": "production" },
             { "Name": "PORT", "Value": "3000" }
           ],
-          "Secrets": [
-            {
-              "Name": "DB_USER",
-              "ValueFrom": {
-                "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "username", "", ""]]
-              }
-            },
-            {
-              "Name": "DB_PASSWORD",
-              "ValueFrom": {
-                "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "password", "", ""]]
-              }
-            }
-          ],
+          "Secrets": {
+            "Fn::If": [
+              "HasProviderSecret",
+              [
+                {
+                  "Name": "DB_USER",
+                  "ValueFrom": {
+                    "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "username", "", ""]]
+                  }
+                },
+                {
+                  "Name": "DB_PASSWORD",
+                  "ValueFrom": {
+                    "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "password", "", ""]]
+                  }
+                },
+                {
+                  "Name": "DEEPSEEK_API_KEY",
+                  "ValueFrom": { "Fn::Sub": ["${Arn}:apiKey::", { "Arn": { "Ref": "ProviderSecretArn" } }] }
+                }
+              ],
+              [
+                {
+                  "Name": "DB_USER",
+                  "ValueFrom": {
+                    "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "username", "", ""]]
+                  }
+                },
+                {
+                  "Name": "DB_PASSWORD",
+                  "ValueFrom": {
+                    "Fn::Join": [":", [{ "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseSecretArn" } }, "password", "", ""]]
+                  }
+                }
+              ]
+            ]
+          },
           "HealthCheck": {
             "Command": ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""],
             "Interval": 30,

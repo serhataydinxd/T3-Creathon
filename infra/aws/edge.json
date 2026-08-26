@@ -52,7 +52,7 @@
               "HTTPPort": 80,
               "OriginKeepaliveTimeout": 5,
               "OriginProtocolPolicy": "http-only",
-              "OriginReadTimeout": 30
+              "OriginReadTimeout": 60
             },
             "DomainName": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-AlbDnsName" } },
             "Id": "ImkanAlb"
