@@ -43,6 +43,9 @@ Kurallar:
 - Her aşamada ölçülebilir bir öğrenme kanıtı belirt.
 - Tüm metinler Türkçe ve öğretmenin doğrudan uygulayabileceği somut yönergeler olmalı.
 - Her metin alanı TEK cümle olsun. Uzun anlatım yazma; kısa ve uygulanabilir yönerge ver.
+- Her aşamanın "title" alanı 5E aşama adını TEKRAR ETMESİN. Öğrenciyi meraklandıran kısa bir soru ya da somut bir eylem ifadesi yaz (ör. "Aynı ampuller, neden farklı parlaklık?").
+- "adaptationSummary" tek ve akıcı bir cümle olsun; koşulları maddeler hâlinde sıralama.
+- Üst düzey "title" atölyenin adı olsun ve hiçbir aşama başlığıyla aynı olmasın.
 - Yanıtın YALNIZCA geçerli bir JSON nesnesi olsun. Açıklama, başlık veya kod bloğu ekleme.`;
 
 function buildUserPrompt(profile: ResourceProfile, skeleton: WorkshopPlan): string {
