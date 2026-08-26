@@ -21,6 +21,7 @@ import {
   WifiOff,
   ZapOff,
 } from "lucide-react";
+import { MaterialLedger } from "@/components/material-ledger";
 import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
 import { MATERIAL_OPTIONS } from "@/server/domain/fixtures";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
@@ -234,6 +235,7 @@ function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving
           <section className="all-stages print-only">
             {plan.stages.map((item, index) => <article key={item.key}><span>0{index + 1} · {item.minutes} dk</span><h3>{item.name}: {item.title}</h3><p><b>Öğretmen:</b> {item.teacherAction}</p><p><b>Öğrenci:</b> {item.studentAction}</p><p><b>Kazanımla bağlantı:</b> {item.objectiveConnection}</p><strong>Kanıt: {item.evidence}</strong></article>)}
           </section>
+          <MaterialLedger plan={plan} />
         </div>
 
         <aside className="validation-panel">

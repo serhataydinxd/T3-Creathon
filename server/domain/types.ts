@@ -20,6 +20,15 @@ export type ResourceProfile = {
   accessibilityNeeds: string[];
 };
 
+export type MaterialLine = {
+  key: MaterialKey;
+  label: string;
+  quantityPerGroup: number;
+  totalQuantity: number;
+  unitCostTry: number;
+  totalCostTry: number;
+};
+
 export type Finding = {
   code: string;
   severity: "blocker" | "warning" | "info";
@@ -53,6 +62,8 @@ export type WorkshopPlan = {
   profile: ResourceProfile;
   groupCount: number;
   estimatedCostTry: number;
+  // Optional so packages generated before the shopping list existed still render.
+  materialPlan?: MaterialLine[];
   adaptationSummary: string;
   stages: Stage[];
   findings: Finding[];

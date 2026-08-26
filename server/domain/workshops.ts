@@ -224,6 +224,46 @@ export async function addFeedback(user: AuthUser, id: string, rating: number, co
     });
 }
 
+export type FeedbackSummary = {
+  count: number;
+  averageRating: number;
+  entries: Array<{
+    rating: number;
+    comment: string;
+    educatorName: string;
+    createdAt: Date;
+    own: boolean;
+  }>;
+};
+
+// Educators only ever see their own note; every other role that already passed
+// the getWorkshop access check sees the whole classroom response.
+export async function getFeedbackSummary(
+  user: AuthUser,
+  id: string,
+): Promise<FeedbackSummary> {
+  const rows = await getDb()
+    .select({
+      rating: educatorFeedback.rating,
+      comment: educatorFeedback.comment,
+      educatorName: users.name,
+      educatorId: educatorFeedback.educatorId,
+      createdAt: educatorFeedback.createdAt,
+    })
+    .from(educatorFeedback)
+    .innerJoin(users, eq(educatorFeedback.educatorId, users.id))
+    .where(eq(educatorFeedback.versionId, id))
+    .orderBy(desc(educatorFeedback.createdAt));
+
+  const visible = user.role === "educator" ? rows.filter((row) => row.educatorId === user.id) : rows;
+  const total = rows.reduce((sum, row) => sum + row.rating, 0);
+  return {
+    count: rows.length,
+    averageRating: rows.length === 0 ? 0 : Math.round((total / rows.length) * 10) / 10,
+    entries: visible.map(({ educatorId, ...row }) => ({ ...row, own: educatorId === user.id })),
+  };
+}
+
 export async function getReviews(id: string) {
   return getDb()
     .select({ decision: reviews.decision, comment: reviews.comment, reviewerName: users.name, createdAt: reviews.createdAt })

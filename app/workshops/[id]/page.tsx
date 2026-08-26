@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
-import { CheckCircle2, Clock3, LockKeyhole, ShieldCheck, Users } from "lucide-react";
+import { CheckCircle2, Clock3, LockKeyhole, ShieldCheck, Star, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { createRevisionAction, feedbackAction, reviewWorkshopAction, submitWorkshopAction } from "@/app/actions/workshops";
 import { publishWorkshopAction } from "@/app/actions/manager";
 import { requireUser } from "@/server/auth/session";
-import { getReviews, getWorkshop } from "@/server/domain/workshops";
+import { getFeedbackSummary, getReviews, getWorkshop } from "@/server/domain/workshops";
+import { MaterialLedger } from "@/components/material-ledger";
 import Link from "next/link";
 
 const statusLabels: Record<string, string> = {
@@ -23,6 +24,7 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
   const workshop = await getWorkshop(user, id);
   if (!workshop) notFound();
   const history = await getReviews(id);
+  const feedback = await getFeedbackSummary(user, id);
   const plan = workshop.content;
   return (
     <AppShell user={user}>
@@ -34,6 +36,7 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
         </header>
         <section className="objective-lock-card"><div className="lock-symbol"><LockKeyhole /></div><div><span className="overline">Kazanım Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div><span className="verified"><ShieldCheck /> Doğrulandı</span></section>
         <div className="package-meta"><span><Clock3 /> {plan.profile.durationMinutes} dakika</span><span><Users /> {plan.profile.classSize} öğrenci · {plan.groupCount} grup</span><span><ShieldCheck /> {plan.findings.filter((finding) => finding.severity === "blocker").length} bloker</span></div>
+        {plan.materialPlan && <MaterialLedger plan={plan} />}
         <div className="persisted-grid">
           <div className="package-stages">
             {plan.stages.map((stage, index) => <article key={stage.key}><div className="package-stage-title"><span>0{index + 1}</span><div><small>{stage.name} · {stage.minutes} dk</small><h2>{stage.title}</h2></div></div><div className="package-columns"><p><b>Öğretmen</b>{stage.teacherAction}</p><p><b>Öğrenci</b>{stage.studentAction}</p></div><div className="trace-line"><LockKeyhole /><div><strong>Kazanım bağlantısı</strong><p>{stage.objectiveConnection}</p></div></div><div className="evidence-box"><ShieldCheck /><div><strong>Öğrenme kanıtı</strong><p>{stage.evidence}</p></div></div></article>)}
@@ -47,6 +50,7 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
             {workshop.status === "published" && <><div className="published-note"><CheckCircle2 /><p>Bu sürüm eğitimcilerin kullanımına açıktır.</p></div><Link className="button ghost wide" href={`/print/${id}`} target="_blank">Yazdırma paketini aç</Link></>}
             {workshop.status === "published" && user.role === "educator" && <form action={feedbackAction} className="feedback-form"><input type="hidden" name="id" value={id} /><label><span>Puan</span><select name="rating" defaultValue="5"><option value="5">5 — Çok iyi</option><option value="4">4 — İyi</option><option value="3">3 — Orta</option><option value="2">2 — Zayıf</option><option value="1">1 — Uygun değil</option></select></label><label><span>Sınıf geri bildirimi</span><textarea name="comment" minLength={3} maxLength={1000} required placeholder="Neyin işe yaradığını yazın…" /></label><button className="button primary wide" type="submit">Geri bildirimi kaydet</button></form>}
             {history.length > 0 && <div className="review-history"><h3>Karar geçmişi</h3>{history.map((review) => <div key={`${review.createdAt.toISOString()}-${review.reviewerName}`}><strong>{review.reviewerName}</strong><span>{review.decision === "approved" ? "Onayladı" : "Değişiklik istedi"}</span><p>{review.comment}</p></div>)}</div>}
+            {feedback.count > 0 && <div className="review-history feedback-history" data-testid="feedback-summary"><h3>Sınıf geri bildirimi</h3><p className="feedback-average"><Star /> <strong data-testid="feedback-average">{feedback.averageRating}</strong> / 5 · {feedback.count} eğitimci</p>{feedback.entries.map((entry) => <div key={`${entry.createdAt.toISOString()}-${entry.educatorName}`}><strong>{entry.own ? "Siz" : entry.educatorName}</strong><span>{entry.rating}/5</span><p>{entry.comment}</p></div>)}</div>}
           </aside>
         </div>
       </section>

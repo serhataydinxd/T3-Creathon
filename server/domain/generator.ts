@@ -1,5 +1,5 @@
 import { DEMO_OBJECTIVE, MATERIALS } from "./fixtures";
-import type { Finding, ResourceProfile, Stage, WorkshopPlan } from "./types";
+import type { Finding, MaterialKey, MaterialLine, ResourceProfile, Stage, WorkshopPlan } from "./types";
 
 const STAGE_DISTRIBUTION = [0.12, 0.28, 0.2, 0.25, 0.15] as const;
 
@@ -132,15 +132,24 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
   const usePhysicalCircuit = shouldUsePhysicalCircuit(profile);
   const stages = buildStages(profile, usePhysicalCircuit);
   const groupCount = Math.ceil(profile.classSize / profile.groupSize);
-  const quantityPerGroup: Partial<Record<keyof typeof MATERIALS, number>> = usePhysicalCircuit
+  const quantityPerGroup: Partial<Record<MaterialKey, number>> = usePhysicalCircuit
     ? { battery: 1, led: 2, "copper-wire": 1, paper: 2 }
     : { paper: 4, tape: 0.25 };
+  const materialPlan: MaterialLine[] = Object.entries(quantityPerGroup).map(([key, quantity]) => {
+    const materialKey = key as MaterialKey;
+    const material = MATERIALS[materialKey];
+    return {
+      key: materialKey,
+      label: material.label,
+      quantityPerGroup: quantity,
+      // Tape is shared per group, so round the class total up to whole units.
+      totalQuantity: Math.ceil(quantity * groupCount * 100) / 100,
+      unitCostTry: material.unitCostTry,
+      totalCostTry: Math.ceil(material.unitCostTry * quantity * groupCount * 100) / 100,
+    };
+  });
   const estimatedCostTry = Math.ceil(
-    groupCount *
-      Object.entries(quantityPerGroup).reduce(
-        (sum, [key, quantity]) => sum + MATERIALS[key as keyof typeof MATERIALS].unitCostTry * quantity,
-        0,
-      ),
+    materialPlan.reduce((sum, line) => sum + line.unitCostTry * line.quantityPerGroup * groupCount, 0),
   );
 
   if (!profile.hasInternet) {
@@ -180,6 +189,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     profile,
     groupCount,
     estimatedCostTry,
+    materialPlan,
     adaptationSummary: usePhysicalCircuit
       ? "Mevcut devre setleriyle güvenli, fiziksel kurulum temelli akış seçildi."
       : "Devre seti ve enerji gerektirmeyen kâğıt tabanlı model; aynı şema kazanımını koruyacak biçimde seçildi.",

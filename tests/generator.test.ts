@@ -62,6 +62,46 @@ describe("İMKÂN replay generator", () => {
     );
   });
 
+  it("publishes a per-group shopping list that reconciles with the cost estimate", () => {
+    const plan = generateWorkshop(DEFAULT_PROFILE);
+    const lines = plan.materialPlan ?? [];
+
+    // 30 students in groups of 5 is six groups of the paper-model route.
+    expect(plan.groupCount).toBe(6);
+    expect(lines.map((line) => line.key)).toEqual(["paper", "tape"]);
+    expect(lines.find((line) => line.key === "paper")).toMatchObject({
+      quantityPerGroup: 4,
+      totalQuantity: 24,
+      totalCostTry: 12,
+    });
+    // A shared roll of tape must not be rounded away to zero.
+    expect(lines.find((line) => line.key === "tape")).toMatchObject({
+      quantityPerGroup: 0.25,
+      totalQuantity: 1.5,
+      totalCostTry: 1.5,
+    });
+    const summed = lines.reduce((total, line) => total + line.totalCostTry, 0);
+    expect(plan.estimatedCostTry).toBe(Math.ceil(summed));
+  });
+
+  it("lists the circuit kit when the physical route is chosen", () => {
+    const plan = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      hasElectricity: true,
+      materials: [...DEFAULT_PROFILE.materials, "battery", "led", "copper-wire"],
+      budgetTry: 500,
+    });
+    const lines = plan.materialPlan ?? [];
+
+    expect(lines.map((line) => line.key)).toEqual(["battery", "led", "copper-wire", "paper"]);
+    expect(lines.find((line) => line.key === "led")).toMatchObject({
+      quantityPerGroup: 2,
+      totalQuantity: 12,
+      totalCostTry: 60,
+    });
+    expect(plan.estimatedCostTry).toBe(186);
+  });
+
   it("rejects unsafe group sizes before generation", () => {
     const findings = validateProfile({ ...DEFAULT_PROFILE, groupSize: 10 });
     expect(findings).toContainEqual(expect.objectContaining({ code: "GROUP_CAPACITY_MISMATCH" }));

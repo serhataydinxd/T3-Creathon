@@ -10,6 +10,9 @@ test("content expert to pedagogue to manager to educator completes across real s
   await expect(page.getByTestId("plan-root")).toBeVisible();
   await expect(page.getByTestId("finding").filter({ hasText: "APPROVED SUBSTITUTION APPLIED" })).toBeVisible();
   await expect(page.getByTestId("stage-detail-engage")).toBeVisible();
+  await expect(page.getByTestId("material-ledger")).toBeVisible();
+  // Six groups of the paper route need 24 sheets in total.
+  await expect(page.getByTestId("material-line-paper")).toContainText("24");
   await page.getByTestId("save-draft").click();
   await expect(page).toHaveURL(/\/workshops\/[0-9a-f-]+\?created=1/);
   const workshopUrl = new URL(page.url()).pathname;
@@ -37,13 +40,24 @@ test("content expert to pedagogue to manager to educator completes across real s
   await page.getByLabel("Sınıf geri bildirimi").fill("Kâğıt tabanlı model sınıfta uygulanabilir ve anlaşılırdı.");
   await page.getByRole("button", { name: "Geri bildirimi kaydet" }).click();
   await expect(page.getByRole("status")).toContainText("başarıyla");
+  await expect(page.getByTestId("feedback-average")).toHaveText("5");
 
   const printLink = page.getByRole("link", { name: "Yazdırma paketini aç" });
   await expect(printLink).toBeVisible();
   await page.goto(`${workshopUrl.replace("/workshops/", "/print/")}`);
   await expect(page.locator("article")).toHaveCount(5);
   await expect(page.getByText(/İ ı Ğ ğ Ş ş Ç ç Ö ö Ü ü/)).toBeVisible();
+  await expect(page.locator(".print-materials")).toContainText("Malzeme listesi");
   expect((await page.pdf()).byteLength).toBeGreaterThan(10_000);
+
+  // The loop closes only if the classroom note reaches the manager by name.
+  await page.goto(workshopUrl);
+  await logout(page);
+  await login(page, "manager@imkan.test");
+  await page.goto(workshopUrl);
+  const summary = page.getByTestId("feedback-summary");
+  await expect(summary).toContainText("Mert Kaya");
+  await expect(summary).toContainText("Kâğıt tabanlı model");
 });
 
 test("change request creates a new immutable version and supersedes the old one", async ({ page }) => {
