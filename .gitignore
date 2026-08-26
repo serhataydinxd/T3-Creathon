@@ -31,3 +31,8 @@ exports/
 
 # Local source document; publish only after redistribution permission.
 T3 Vakfı Bursiyer Yapay Zeka Creathon Problemler Kitapçığı.pdf
+
+# Creathon submission working files, kept local
+docs/*.pptx
+docs/*.pdf
+docs/Screenshot*

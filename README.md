@@ -1,44 +1,124 @@
 # İMKÂN
 
-İMKÂN is our proposed product for **Problem 3 — Bilim Türkiye AI Eğitim
-İçeriği Geliştirme Asistanı** in the T3 Vakfı Yapay Zekâ Creathon problem
-booklet.
+**Onaylı bir kazanımı, okulun gerçek imkânlarına uyarlanmış, pedagog onaylı ve
+sınıfta basılıp uygulanabilir bir atölye paketine dönüştüren yapay zekâ
+asistanı.**
 
-> Kazanım aynı kalır; atölye, okulun imkânlarına göre yeniden tasarlanır.
+> Kazanım sabit kalır; atölye, okulun imkânlarına göre yeniden tasarlanır.
 
-İMKÂN converts an approved learning objective into an age-appropriate,
-5E/GiPSCi-aligned workshop package under real constraints such as time,
-class size, budget, available materials, electricity, internet and
-accessibility. A pedagogical expert reviews and approves every generated
-version before educators can use it.
+🔗 **Canlı demo:** https://d1a8sno49hnlhc.cloudfront.net
 
-## Current implementation
+T3 Vakfı Bursiyer Yapay Zekâ Creathonu 2026 · **Problem 3 — Bilim Türkiye AI
+Eğitim İçeriği Geliştirme Asistanı**
 
-The repository now contains a runnable public-demo vertical slice:
+![İMKÂN onaylı atölye paketi](docs/images/paket.png)
 
-- Resource-profile form for time, class/group size, budget, power, internet,
-  materials and accessibility
-- Server-side replay generation through `POST /api/demo/generate`
-- Two genuine routes for the same objective: physical circuit or an approved
-  paper-based model
-- Exact duration/group/material-cost calculations and typed findings
-- Five-stage 5E plan with explicit objective-to-evidence traceability
-- Pedagogical approve/change-request transition
-- Educator print package with teacher and student instructions
-- PostgreSQL/Drizzle schema foundation, Docker image and AWS deployment notes
-- Pending-account registration with manager role activation
-- Argon2id passwords and revocable, database-backed opaque sessions
-- Persistent draft → review → approval → publication → feedback workflow
-- Immutable revision history and audited status transitions
-- Production-browser Playwright and axe accessibility coverage
+*Elektriği ve interneti olmayan bir sınıf için yapay zekâ tarafından yazılmış,
+pedagog onaylı ve yayımlanmış atölye paketi. Kazanım kilitli, malzeme listesi ve
+maliyet kod tarafından hesaplanmış.*
 
-Replay generation is intentionally deterministic and needs no model-provider
-credential. Accounts, reviews, publication and feedback are persisted; the live
-LLM provider remains a later phase.
+---
 
-## Run locally
+## Hangi problemi çözüyor?
 
-Requirements: Node.js 24 or newer.
+Bir fen öğretmeni, tek bir kazanım için atölye planı hazırlarken şunları
+tek tek düşünmek zorundadır: 40 dakikaya sığacak mı, 30 öğrenci kaç gruba
+bölünecek, okulda priz var mı, internet çekiyor mu, deney seti bütçeye
+sığıyor mu, görme güçlüğü olan öğrenci için alternatif ne olacak?
+
+Hazır plan bankaları bu soruları cevaplamaz. Genel amaçlı bir sohbet robotu
+ise elinizde olmayan malzemeyi ister, süreyi tutturmaz ve kazanımı sessizce
+değiştirir. Ortaya çıkan planın pedagojik olarak onaylandığına dair hiçbir iz
+kalmaz.
+
+**İMKÂN tam bu boşluğu doldurur:** kazanımı kilitler, okulun imkânlarını girdi
+olarak alır ve aynı kazanıma ulaşan farklı bir yol üretir.
+
+## Neyi kolaylaştırıyor?
+
+| Önce | İMKÂN ile |
+|---|---|
+| Plan hazırlamak saatler sürer | Koşulları seçip saniyeler içinde paket üretilir |
+| Elinizde olmayan malzeme önerilir | Yalnızca işaretlediğiniz malzemeler kullanılır |
+| Bütçe sonradan fark edilir | Maliyet hesaplanır, bütçeyi aşarsa üretim durdurulur |
+| Süre tahminidir | Aşama süreleri istenen süreye birebir bölünür |
+| Elektrik/internet yoksa plan çöker | Onaylı, çevrimdışı alternatife otomatik geçilir |
+| "Bunu kim onayladı?" belirsizdir | Her sürümün pedagog onayı ve karar geçmişi kayıtlıdır |
+| Alışveriş listesi elle çıkarılır | Grup başına ve sınıf toplamı malzeme listesi hazır gelir |
+
+### Somut örnek
+
+Elektriği ve interneti olmayan, yalnızca kâğıt-kalem-makas-bandı bulunan bir
+sınıf, 30 öğrenci, 40 dakika ve 50 ₺ bütçe girildiğinde İMKÂN devre setini
+**kâğıt tabanlı insan-devresi modeliyle** değiştirir, aynı kazanımı korur ve
+14 ₺ maliyetli, 6 gruba bölünmüş, yazdırılabilir bir paket üretir.
+
+Aynı sınıfa devre seti eklendiğinde ise fiziksel kurulum rotası seçilir; maliyet
+186 ₺'ye çıktığı için 50 ₺'lik kesin bütçe sınırı üretimi **bilinçli olarak
+durdurur**. Kazanım her iki senaryoda da aynıdır.
+
+## Yapay zekâ nerede devreye giriyor?
+
+Atölyenin **metnini** bir dil modeli yazar: aşama başlıkları, öğretmen ve
+öğrenci yönergeleri, öğrenme kanıtı ve kazanım bağlantısı.
+
+Modelin **dokunamadığı** şeyler kod tarafından yeniden hesaplanır:
+
+- 5E aşamalarının sayısı ve sırası
+- Aşama sürelerinin dağılımı ve toplamı
+- Grup sayısı, malzeme miktarları ve maliyet
+- Bütçe, güvenlik ve kapasite kontrolleri
+- Kilitli kazanım metni
+
+Taslak kaydedilirken sunucu iskeleti sıfırdan yeniden üretir ve yalnızca
+incelenen metni üzerine yerleştirir. Bu nedenle model, elinizde olmayan bir
+malzemeyi veya bütçeyi aşan bir kurulumu kayda geçiremez.
+
+Sağlayıcı yavaşlarsa, boş yanıt dönerse veya sözleşmeyi bozarsa sistem
+**doğrulanmış çevrimdışı plana düşer** ve bunu bir uyarı olarak bildirir.
+Üretim her koşulda kullanılabilir bir atölye döndürür.
+
+## Rol akışı
+
+```
+İçerik uzmanı        Pedagog                 Yönetici        Eğitimci
+─────────────        ───────                 ────────        ────────
+koşulları girer  →   kazanım bağlantısını
+paketi üretir        ve kanıtları inceler →  yayımlar    →   uygular
+taslağı gönderir     onaylar / revizyon                      yazdırır
+                     ister                                   geri bildirim
+                                                             bırakır
+```
+
+Kendi paketini onaylamak engellidir. Değişiklik istenen sürüm dondurulur, yeni
+sürüm oluşturulur ve eski sürüm "eski sürüm" olarak kayıtta kalır. Eğitimci geri
+bildirimi yöneticinin yeniden kullanım özetine düşer.
+
+## Şu an çalışan kısım
+
+Uçtan uca çalışan, herkese açık bir dikey dilim:
+
+- Kaynak profili formu: süre, sınıf/grup mevcudu, bütçe, elektrik, internet,
+  malzeme ve erişilebilirlik
+- Dil modeliyle canlı üretim (`APP_MODE=live`) ve deterministik yedek
+- Aynı kazanım için iki gerçek rota: fiziksel devre veya onaylı kâğıt model
+- Grup başına ve sınıf toplamı malzeme listesi, maliyet ve envanter durumu
+- Kazanım–kanıt izlenebilirliği olan beş aşamalı 5E planı
+- Taslak → inceleme → onay → yayım → geri bildirim iş akışı
+- Değişmez sürüm geçmişi ve denetlenebilir durum geçişleri
+- Puan dağılımıyla sınıf geri bildirimi ve yöneticiye yeniden kullanım özeti
+- Yazdırılabilir eğitimci paketi (öğretmen/öğrenci yönergeleri, malzeme tablosu)
+- Onay bekleyen kayıt akışı ve yönetici tarafından rol atama
+- Argon2id şifreleme, iptal edilebilir sunucu tabanlı oturumlar
+- HTTPS yayın, gerçek tarayıcı testleri ve erişilebilirlik denetimi
+
+**Dürüst kapsam sınırı:** şu an tek bir onaylı kazanım (F.7.7.1.1, seri ve
+paralel devre şeması) ve tek pedagoji modeli (5E) tanımlıdır. Mimari çoklu
+kazanımı destekler; referans veri kümesi genişletilmeyi bekliyor.
+
+## Hızlı başlangıç
+
+Gereksinim: Node.js 24+
 
 ```bash
 npm install
@@ -47,56 +127,66 @@ npm run db:seed
 npm run dev
 ```
 
-Open `http://localhost:3000`, then select **Atölye laboratuvarı**. The default
-profile recreates the main demo: 30 students, 40 minutes, no power or internet,
-and classroom stationery only.
+`http://localhost:3000` adresini açın ve **Atölye laboratuvarı**'na girin.
+Varsayılan profil ana demo senaryosunu kurar: 30 öğrenci, 40 dakika, elektrik
+ve internet yok, yalnızca sınıf kırtasiyesi.
 
-Run the full verification suite with:
+Yerel hesaplar (`DEMO_PASSWORD` verilmezse şifre `I.mkanDemo!2026`):
+
+| Hesap | Rol |
+|---|---|
+| `content@imkan.test` | İçerik uzmanı |
+| `pedagogue@imkan.test` | Pedagog |
+| `educator@imkan.test` | Eğitimci |
+| `manager@imkan.test` | Yönetici |
+
+Herkese açık kayıtla oluşturulan hesaplar, bir yönetici etkinleştirene kadar
+onay bekler; rol ve oturum almaz.
+
+### Canlı üretimi açmak
 
 ```bash
-npm run check
+cp .env.example .env
+# DEEPSEEK_API_KEY değerini girin
+APP_MODE=live npm run dev
 ```
 
-The repository can run browser tests without Docker by using embedded PGlite,
-which executes the same committed PostgreSQL migrations:
+`APP_MODE` `live` değilse veya anahtar yoksa sistem deterministik modda kalır.
+
+### Doğrulama
 
 ```bash
-npx playwright install chromium
-npm run test:e2e
+npm run check      # lint + 59 birim testi + üretim derlemesi
+npm run check:all  # yukarısı + 11 tarayıcı testi
 ```
 
-Seeded local accounts use `I.mkanDemo!2026` unless `DEMO_PASSWORD` is set:
+Tarayıcı testleri Docker gerektirmez: gömülü PGlite üzerinde aynı PostgreSQL
+göçlerini çalıştırır ve ağ çağrısı yapmaz.
 
-- `content@imkan.test`
-- `pedagogue@imkan.test`
-- `educator@imkan.test`
-- `manager@imkan.test`
+## Teknoloji
 
-Publicly registered accounts remain pending and receive no role or session
-until a manager activates them.
+Next.js 16 · TypeScript · PostgreSQL + Drizzle · Argon2id · Zod · Playwright +
+axe · Docker · AWS ECS Fargate + RDS + CloudFront · GitHub Actions OIDC
 
-## Public deployment
+## Belgeler
 
-Deploy the account-enabled replay application to ECS Fargate backed by private
-Amazon RDS PostgreSQL. Replay mode requires no model-provider secret. A second
-private Fargate service can run the worker when live generation is enabled. See
-the [deployment guide](docs/07-deployment.md).
+| Belge | İçerik |
+|---|---|
+| [Ürün özeti](docs/01-product-brief.md) | Problem, kullanıcılar, kapsam |
+| [Gereksinim izlenebilirliği](docs/02-requirements-traceability.md) | Creathon şartlarıyla eşleme |
+| [Teknik mimari](docs/03-technical-architecture.md) | Bileşenler ve veri akışı |
+| [Yapay zekâ üretimi ve doğrulama](docs/04-ai-generation-validation.md) | Sağlayıcı sözleşmesi, güvenceler |
+| [Veri, API ve güvenlik](docs/05-data-api-security.md) | Şema, uç noktalar, tehdit modeli |
+| [Derleme, test ve demo](docs/06-build-test-demo.md) | Doğrulama planı |
+| [Yayın](docs/07-deployment.md) | AWS topolojisi |
+| [Üretim el kitabı](docs/09-production-runbook.md) | İşletme adımları |
 
-Do not put secrets, student data or real user data in the public demo. Copy
-`.env.example` to `.env.local` only for local development; `.env*` files are
-excluded from Git and the Docker build context.
+## Güvenlik ve gizlilik notu
 
-## Documentation
+Herkese açık demoya gerçek öğrenci verisi, kişisel veri veya gerçek şifre
+girmeyin. Kenar (CloudFront) ile uygulama arasındaki iç bağlantı, alan adı
+alınana kadar HTTP'dir; yük dengeleyici yalnızca CloudFront kaynak aralıklarını
+kabul eder. `.env*` dosyaları Git ve Docker derleme bağlamı dışındadır.
 
-- [Product brief](docs/01-product-brief.md)
-- [Creathon requirement traceability](docs/02-requirements-traceability.md)
-- [Technical architecture](docs/03-technical-architecture.md)
-- [AI generation and validation](docs/04-ai-generation-validation.md)
-- [Data, API and security](docs/05-data-api-security.md)
-- [Build, testing and demo plan](docs/06-build-test-demo.md)
-- [Public deployment](docs/07-deployment.md)
-- [Production runbook](docs/09-production-runbook.md)
-
-The original Creathon problem booklet is retained locally for traceability but
-excluded from the public repository until redistribution permission is
-confirmed.
+Creathon problem kitapçığı izlenebilirlik için yerelde tutulur; yeniden dağıtım
+izni doğrulanana kadar herkese açık depoya eklenmemiştir.
