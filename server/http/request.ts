@@ -5,9 +5,21 @@ export function isSameOrigin(request: Request) {
   const fetchSite = request.headers.get("sec-fetch-site");
   if (!origin || fetchSite === "cross-site") return false;
   const url = new URL(request.url);
-  const protocol = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? url.host;
-  return origin === `${protocol}://${host}`;
+  const expectedHost =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? url.host;
+  // Compare hosts rather than whole origins. TLS terminates at the CloudFront
+  // edge and the edge-to-ALB hop is plain HTTP, so the load balancer reports
+  // `x-forwarded-proto: http` for a request the viewer made over HTTPS.
+  // Comparing schemes would reject every request that arrives through the
+  // edge. The host match plus the `sec-fetch-site` rejection above carries the
+  // CSRF guarantee, which is also how Next.js validates Server Actions.
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return false;
+  }
+  return originHost !== "" && originHost === expectedHost;
 }
 
 export async function readBoundedJson(request: Request, maxBytes = 16_384): Promise<unknown> {
