@@ -10,7 +10,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
   const plan = workshop.content;
   return (
     <main className="print-document">
-      <header><strong>İMKÂN</strong><span>Onaylı eğitimci paketi · Sürüm {workshop.version}</span><h1>{workshop.title}</h1><p>{plan.adaptationSummary}</p></header>
+      <header><strong>İMKÂN</strong><span>Onaylı eğitimci paketi · Sürüm {workshop.version} · {plan.mode === "LIVE" ? "Yapay zekâ üretimi" : "Çevrimdışı plan"}</span><h1>{workshop.title}</h1><p>{plan.adaptationSummary}</p></header>
       <section className="print-objective"><b>Kazanım Kilidi · {plan.objective.code}</b><p>{plan.objective.canonicalText}</p><small>{plan.objective.source} · Paket kimliği: {workshop.id}</small></section>
       <dl><div><dt>Süre</dt><dd>{plan.profile.durationMinutes} dakika</dd></div><div><dt>Sınıf</dt><dd>{plan.profile.classSize} öğrenci</dd></div><div><dt>Gruplar</dt><dd>{plan.groupCount} grup</dd></div><div><dt>Maliyet</dt><dd>{plan.estimatedCostTry} ₺</dd></div></dl>
       {plan.materialPlan && plan.materialPlan.length > 0 && (

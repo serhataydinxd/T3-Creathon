@@ -19,6 +19,8 @@ test("content expert to pedagogue to manager to educator completes across real s
   await page.getByTestId("save-draft").click();
   await expect(page).toHaveURL(/\/workshops\/[0-9a-f-]+\?created=1/);
   const workshopUrl = new URL(page.url()).pathname;
+  // Replay is the mode under test; the badge must say so rather than implying AI.
+  await expect(page.getByTestId("plan-mode")).toHaveAttribute("data-mode", "REPLAY");
   await expect(page.getByTestId("workflow-status")).toHaveAttribute("data-status", "draft");
   await page.getByTestId("submit-for-review").click();
   await expect(page.getByTestId("workflow-status")).toHaveAttribute("data-status", "submitted");

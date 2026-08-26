@@ -32,7 +32,7 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
         {(notices.submitted || notices.reviewed || notices.feedback) && <div className="success-notice" role="status"><CheckCircle2 /> İşlem başarıyla kaydedildi.</div>}
         <header className="persisted-header">
           <div><span className="overline">Fen bilimleri · Sürüm {workshop.version}</span><h1>{workshop.title}</h1><p>{plan.adaptationSummary}</p></div>
-          <span data-testid="workflow-status" data-status={workshop.status} className={`workflow-status ${workshop.status}`}>{statusLabels[workshop.status]}</span>
+          <div className="header-tags"><span data-testid="plan-mode" data-mode={plan.mode} className={`mode-tag ${plan.mode === "LIVE" ? "live" : "replay"}`}>{plan.mode === "LIVE" ? "CANLI ÜRETİM" : "REPLAY"}</span><span data-testid="workflow-status" data-status={workshop.status} className={`workflow-status ${workshop.status}`}>{statusLabels[workshop.status]}</span></div>
         </header>
         <section className="objective-lock-card"><div className="lock-symbol"><LockKeyhole /></div><div><span className="overline">Kazanım Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div><span className="verified"><ShieldCheck /> Doğrulandı</span></section>
         <div className="package-meta"><span><Clock3 /> {plan.profile.durationMinutes} dakika</span><span><Users /> {plan.profile.classSize} öğrenci · {plan.groupCount} grup</span><span><ShieldCheck /> {plan.findings.filter((finding) => finding.severity === "blocker").length} bloker</span></div>
