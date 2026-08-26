@@ -227,6 +227,8 @@ export async function addFeedback(user: AuthUser, id: string, rating: number, co
 export type FeedbackSummary = {
   count: number;
   averageRating: number;
+  // Highest rating first, so the panel can render the bars top down.
+  distribution: Array<{ rating: number; count: number; share: number }>;
   entries: Array<{
     rating: number;
     comment: string;
@@ -257,11 +259,52 @@ export async function getFeedbackSummary(
 
   const visible = user.role === "educator" ? rows.filter((row) => row.educatorId === user.id) : rows;
   const total = rows.reduce((sum, row) => sum + row.rating, 0);
+  const distribution = [5, 4, 3, 2, 1].map((rating) => {
+    const count = rows.filter((row) => row.rating === rating).length;
+    return {
+      rating,
+      count,
+      share: rows.length === 0 ? 0 : Math.round((count / rows.length) * 100),
+    };
+  });
   return {
     count: rows.length,
     averageRating: rows.length === 0 ? 0 : Math.round((total / rows.length) * 10) / 10,
+    distribution,
     entries: visible.map(({ educatorId, ...row }) => ({ ...row, own: educatorId === user.id })),
   };
+}
+
+// Reuse rollup for the manager dashboard: one row per package that has been
+// used in a classroom, newest rating first.
+export async function listFeedbackRollup(actor: AuthUser) {
+  if (actor.role !== "manager") throw new Error("FORBIDDEN");
+  const rows = await getDb()
+    .select({
+      versionId: educatorFeedback.versionId,
+      title: workshopVersions.title,
+      version: workshopVersions.version,
+      rating: educatorFeedback.rating,
+    })
+    .from(educatorFeedback)
+    .innerJoin(workshopVersions, eq(educatorFeedback.versionId, workshopVersions.id));
+
+  const byVersion = new Map<string, { versionId: string; title: string; version: number; ratings: number[] }>();
+  for (const row of rows) {
+    const existing = byVersion.get(row.versionId);
+    if (existing) existing.ratings.push(row.rating);
+    else byVersion.set(row.versionId, { versionId: row.versionId, title: row.title, version: row.version, ratings: [row.rating] });
+  }
+  return [...byVersion.values()]
+    .map((entry) => ({
+      versionId: entry.versionId,
+      title: entry.title,
+      version: entry.version,
+      count: entry.ratings.length,
+      averageRating:
+        Math.round((entry.ratings.reduce((sum, value) => sum + value, 0) / entry.ratings.length) * 10) / 10,
+    }))
+    .sort((a, b) => b.averageRating - a.averageRating || b.count - a.count);
 }
 
 export async function getReviews(id: string) {

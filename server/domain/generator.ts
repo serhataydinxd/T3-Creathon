@@ -132,24 +132,43 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
   const usePhysicalCircuit = shouldUsePhysicalCircuit(profile);
   const stages = buildStages(profile, usePhysicalCircuit);
   const groupCount = Math.ceil(profile.classSize / profile.groupSize);
-  const quantityPerGroup: Partial<Record<MaterialKey, number>> = usePhysicalCircuit
-    ? { battery: 1, led: 2, "copper-wire": 1, paper: 2 }
-    : { paper: 4, tape: 0.25 };
-  const materialPlan: MaterialLine[] = Object.entries(quantityPerGroup).map(([key, quantity]) => {
-    const materialKey = key as MaterialKey;
-    const material = MATERIALS[materialKey];
+  // Ordered so the route-defining materials lead and shared consumables follow.
+  const requirements: Array<{ key: MaterialKey; basis: "group" | "student"; quantity: number }> =
+    usePhysicalCircuit
+      ? [
+          { key: "battery", basis: "group", quantity: 1 },
+          { key: "led", basis: "group", quantity: 2 },
+          { key: "copper-wire", basis: "group", quantity: 1 },
+          { key: "paper", basis: "group", quantity: 2 },
+          { key: "pencil", basis: "student", quantity: 1 },
+        ]
+      : [
+          { key: "paper", basis: "group", quantity: 4 },
+          { key: "pencil", basis: "student", quantity: 1 },
+          { key: "scissors", basis: "group", quantity: 1 },
+          { key: "tape", basis: "group", quantity: 0.25 },
+        ];
+
+  const round = (value: number) => Math.round(value * 100) / 100;
+  const materialPlan: MaterialLine[] = requirements.map(({ key, basis, quantity }) => {
+    const material = MATERIALS[key];
+    const perGroup = basis === "student" ? quantity * profile.groupSize : quantity;
     return {
-      key: materialKey,
+      key,
       label: material.label,
-      quantityPerGroup: quantity,
-      // Tape is shared per group, so round the class total up to whole units.
-      totalQuantity: Math.ceil(quantity * groupCount * 100) / 100,
+      basis,
+      quantityPerUnit: quantity,
+      quantityPerGroup: round(perGroup),
+      // Shared consumables such as tape are fractional per group, so the class
+      // total is rounded rather than truncated away to nothing.
+      totalQuantity: round(perGroup * groupCount),
       unitCostTry: material.unitCostTry,
-      totalCostTry: Math.ceil(material.unitCostTry * quantity * groupCount * 100) / 100,
+      totalCostTry: round(material.unitCostTry * perGroup * groupCount),
+      availableByDefault: material.availableByDefault,
     };
   });
   const estimatedCostTry = Math.ceil(
-    materialPlan.reduce((sum, line) => sum + line.unitCostTry * line.quantityPerGroup * groupCount, 0),
+    materialPlan.reduce((sum, line) => sum + line.totalCostTry, 0),
   );
 
   if (!profile.hasInternet) {

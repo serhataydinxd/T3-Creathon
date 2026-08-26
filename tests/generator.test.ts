@@ -68,11 +68,20 @@ describe("İMKÂN replay generator", () => {
 
     // 30 students in groups of 5 is six groups of the paper-model route.
     expect(plan.groupCount).toBe(6);
-    expect(lines.map((line) => line.key)).toEqual(["paper", "tape"]);
+    expect(lines.map((line) => line.key)).toEqual(["paper", "pencil", "scissors", "tape"]);
     expect(lines.find((line) => line.key === "paper")).toMatchObject({
+      basis: "group",
+      quantityPerUnit: 4,
       quantityPerGroup: 4,
       totalQuantity: 24,
       totalCostTry: 12,
+    });
+    // A per-learner line scales by group size, not by group count.
+    expect(lines.find((line) => line.key === "pencil")).toMatchObject({
+      basis: "student",
+      quantityPerUnit: 1,
+      quantityPerGroup: 5,
+      totalQuantity: 30,
     });
     // A shared roll of tape must not be rounded away to zero.
     expect(lines.find((line) => line.key === "tape")).toMatchObject({
@@ -84,7 +93,12 @@ describe("İMKÂN replay generator", () => {
     expect(plan.estimatedCostTry).toBe(Math.ceil(summed));
   });
 
-  it("lists the circuit kit when the physical route is chosen", () => {
+  it("keeps the offline route inside the default classroom inventory", () => {
+    const lines = generateWorkshop(DEFAULT_PROFILE).materialPlan ?? [];
+    expect(lines.every((line) => line.availableByDefault)).toBe(true);
+  });
+
+  it("lists the circuit kit and flags what must be procured", () => {
     const plan = generateWorkshop({
       ...DEFAULT_PROFILE,
       hasElectricity: true,
@@ -93,12 +107,24 @@ describe("İMKÂN replay generator", () => {
     });
     const lines = plan.materialPlan ?? [];
 
-    expect(lines.map((line) => line.key)).toEqual(["battery", "led", "copper-wire", "paper"]);
+    expect(lines.map((line) => line.key)).toEqual([
+      "battery",
+      "led",
+      "copper-wire",
+      "paper",
+      "pencil",
+    ]);
     expect(lines.find((line) => line.key === "led")).toMatchObject({
       quantityPerGroup: 2,
       totalQuantity: 12,
       totalCostTry: 60,
+      availableByDefault: false,
     });
+    expect(lines.filter((line) => !line.availableByDefault).map((line) => line.key)).toEqual([
+      "battery",
+      "led",
+      "copper-wire",
+    ]);
     expect(plan.estimatedCostTry).toBe(186);
   });
 

@@ -23,10 +23,15 @@ export type ResourceProfile = {
 export type MaterialLine = {
   key: MaterialKey;
   label: string;
+  // "student" lines are costed per learner, so quantityPerGroup already
+  // multiplies the per-learner amount by the group size.
+  basis: "group" | "student";
+  quantityPerUnit: number;
   quantityPerGroup: number;
   totalQuantity: number;
   unitCostTry: number;
   totalCostTry: number;
+  availableByDefault: boolean;
 };
 
 export type Finding = {

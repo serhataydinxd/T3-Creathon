@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, CheckCircle2, Clock3, FlaskConical, Users } from "lucide-react";
+import { ArrowRight, BookOpenCheck, CheckCircle2, Clock3, FlaskConical, Star, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/server/auth/session";
-import { listWorkshops } from "@/server/domain/workshops";
+import { listFeedbackRollup, listWorkshops } from "@/server/domain/workshops";
 import { listPendingUsers } from "@/server/domain/users";
 import { activateUserAction } from "@/app/actions/manager";
 
@@ -20,6 +20,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const params = await searchParams;
   const workshops = await listWorkshops(user);
   const pendingUsers = user.role === "manager" ? await listPendingUsers(user) : [];
+  const feedbackRollup = user.role === "manager" ? await listFeedbackRollup(user) : [];
   const canCreate = user.role === "content_expert" || user.role === "pedagogue";
   return (
     <AppShell user={user}>
@@ -38,6 +39,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div><Users /><strong>4</strong><span>Aktif rol</span></div>
         </div>
         {user.role === "manager" && <section className="pending-users"><div className="section-heading"><div><span className="overline">Hesap güvenliği</span><h2>Onay bekleyen kayıtlar</h2></div></div>{pendingUsers.length === 0 ? <p>Onay bekleyen kullanıcı yok.</p> : pendingUsers.map((pending) => <form action={activateUserAction} key={pending.id}><div><strong>{pending.name}</strong><small>{pending.email}</small></div><input type="hidden" name="userId" value={pending.id} /><label><span>Atanacak rol</span><select name="role" defaultValue="educator"><option value="educator">Eğitimci</option><option value="content_expert">İçerik uzmanı</option><option value="pedagogue">Pedagog</option></select></label><button className="button primary" type="submit">Etkinleştir</button></form>)}</section>}
+        {user.role === "manager" && feedbackRollup.length > 0 && <section className="feedback-rollup" data-testid="feedback-rollup"><div className="section-heading"><div><span className="overline">Yeniden kullanım</span><h2>Sınıf geri bildirimi özeti</h2></div><span>{feedbackRollup.reduce((sum, row) => sum + row.count, 0)} geri bildirim</span></div><div className="rollup-list">{feedbackRollup.map((row) => <Link className="rollup-row" data-testid={`rollup-${row.versionId}`} href={`/workshops/${row.versionId}`} key={row.versionId}><div><strong>{row.title}</strong><small>Sürüm {row.version}</small></div><span className="rollup-score"><Star /> {row.averageRating} / 5</span><small>{row.count} eğitimci</small><ArrowRight /></Link>)}</div></section>}
         <section className="dashboard-list">
           <div className="section-heading"><div><span className="overline">İş akışı</span><h2>{user.role === "educator" ? "Kullanılabilir paketler" : "Atölyeler"}</h2></div></div>
           {workshops.length === 0 ? (

@@ -13,6 +13,9 @@ test("content expert to pedagogue to manager to educator completes across real s
   await expect(page.getByTestId("material-ledger")).toBeVisible();
   // Six groups of the paper route need 24 sheets in total.
   await expect(page.getByTestId("material-line-paper")).toContainText("24");
+  // A per-learner line scales to the whole class, and the offline route needs no purchase.
+  await expect(page.getByTestId("material-line-pencil")).toContainText("30");
+  await expect(page.getByTestId("material-ledger").locator(".supply-tag.buy")).toHaveCount(0);
   await page.getByTestId("save-draft").click();
   await expect(page).toHaveURL(/\/workshops\/[0-9a-f-]+\?created=1/);
   const workshopUrl = new URL(page.url()).pathname;
@@ -58,6 +61,13 @@ test("content expert to pedagogue to manager to educator completes across real s
   const summary = page.getByTestId("feedback-summary");
   await expect(summary).toContainText("Mert Kaya");
   await expect(summary).toContainText("Kâğıt tabanlı model");
+  await expect(summary.locator(".rating-bars > div")).toHaveCount(5);
+
+  // The reuse rollup is the manager's entry point back into a used package.
+  await page.goto("/dashboard");
+  const rollup = page.getByTestId("feedback-rollup");
+  await expect(rollup).toContainText("Elektrik Devreleri");
+  await expect(rollup).toContainText("5 / 5");
 });
 
 test("change request creates a new immutable version and supersedes the old one", async ({ page }) => {
