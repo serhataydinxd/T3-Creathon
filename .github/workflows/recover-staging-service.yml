@@ -7,6 +7,12 @@ on:
         description: Revision already proven by Diagnose staging web database
         required: true
         type: string
+      desired_count:
+        description: One to recover traffic, zero to stop an unhealthy task loop
+        required: true
+        default: "1"
+        type: choice
+        options: ["0", "1"]
 
 permissions:
   contents: read
@@ -45,6 +51,7 @@ jobs:
       - name: Recover the service to the verified task definition
         env:
           REVISION: ${{ inputs.verified_task_definition_revision }}
+          DESIRED_COUNT: ${{ inputs.desired_count }}
         run: |
           case "$REVISION" in
             *[!0-9]*|"") echo "verified_task_definition_revision must be numeric" >&2; exit 1 ;;
@@ -59,7 +66,7 @@ jobs:
             --cluster imkan-staging-cluster \
             --service imkan-staging-web \
             --task-definition "$TASK_DEFINITION" \
-            --desired-count 1 \
+            --desired-count "$DESIRED_COUNT" \
             --force-new-deployment \
             --query 'service.{serviceName:serviceName,taskDefinition:taskDefinition,desiredCount:desiredCount}'
           aws ecs wait services-stable \
