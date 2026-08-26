@@ -9,11 +9,6 @@ on:
         default: "1"
         type: choice
         options: ["1", "2"]
-      certificate_arn:
-        description: Optional ACM certificate ARN; set STAGING_BASE_URL when used
-        required: false
-        default: ""
-        type: string
 
 permissions:
   contents: read
@@ -27,16 +22,16 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   ENVIRONMENT_NAME: imkan-staging
   FOUNDATION_STACK: imkan-staging-foundation
+  EDGE_STACK: imkan-staging-edge
   SERVICE_STACK: imkan-staging-service
   CFN_ROLE_ARN: ${{ vars.AWS_CLOUDFORMATION_ROLE_ARN }}
   AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
   OIDC_SUBJECT: ${{ vars.OIDC_SUBJECT }}
-  SMOKE_BASE_URL: ${{ vars.STAGING_BASE_URL }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     environment: staging
     steps:
       - uses: actions/checkout@v5
@@ -50,8 +45,6 @@ jobs:
       - run: npm run check
 
       - name: Validate deployment configuration
-        env:
-          CERTIFICATE_ARN: ${{ inputs.certificate_arn }}
         run: ./scripts/check-production-config.sh
 
       - name: Configure short-lived AWS credentials
@@ -84,8 +77,6 @@ jobs:
           fi
 
       - name: Deploy or update the foundation
-        env:
-          CERTIFICATE_ARN: ${{ inputs.certificate_arn }}
         run: |
           aws cloudformation deploy \
             --stack-name "$FOUNDATION_STACK" \
@@ -95,7 +86,7 @@ jobs:
             --no-fail-on-empty-changeset \
             --parameter-overrides \
               EnvironmentName="$ENVIRONMENT_NAME" \
-              CertificateArn="$CERTIFICATE_ARN" \
+              CertificateArn="" \
               DatabaseDeletionProtection=false \
               DatabaseMultiAz=false
 
@@ -124,6 +115,26 @@ jobs:
           echo "subnet_b=$(output PublicSubnetBId)" >> "$GITHUB_OUTPUT"
           echo "task_security_group=$(output EcsSecurityGroupId)" >> "$GITHUB_OUTPUT"
           echo "alb_dns=$(output AlbDnsName)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the free-tier HTTPS edge
+        run: |
+          aws cloudformation deploy \
+            --stack-name "$EDGE_STACK" \
+            --template-file infra/aws/edge.json \
+            --role-arn "$CFN_ROLE_ARN" \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides EnvironmentName="$ENVIRONMENT_NAME"
+
+      - name: Read HTTPS edge URL
+        id: edge
+        run: |
+          HTTPS_URL=$(aws cloudformation describe-stacks --stack-name "$EDGE_STACK" \
+            --query "Stacks[0].Outputs[?OutputKey=='HttpsUrl'].OutputValue | [0]" --output text)
+          test -n "$HTTPS_URL"
+          test "$HTTPS_URL" != "None"
+          echo "https_url=$HTTPS_URL" >> "$GITHUB_OUTPUT"
+          echo "### HTTPS demo" >> "$GITHUB_STEP_SUMMARY"
+          echo "$HTTPS_URL" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -236,8 +247,7 @@ jobs:
 
       - name: Smoke the deployed health endpoint
         env:
-          ALB_DNS: ${{ steps.foundation.outputs.alb_dns }}
+          HTTPS_URL: ${{ steps.edge.outputs.https_url }}
         run: |
-          BASE_URL=${SMOKE_BASE_URL:-http://$ALB_DNS}
           curl --fail --show-error --silent --retry 12 --retry-delay 5 \
-            "$BASE_URL/api/health"
+            "$HTTPS_URL/api/health"

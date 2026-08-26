@@ -6,6 +6,13 @@ The current account-enabled MVP requires PostgreSQL. The preferred public AWS
 topology is therefore **ECS Fargate + private Amazon RDS PostgreSQL**, even
 while generation itself remains in replay mode.
 
+The no-domain staging demo is served through a CloudFront-assigned HTTPS URL.
+CloudFront redirects viewers to TLS, disables caching for authenticated dynamic
+content, and forwards request headers, cookies and query strings to the ALB.
+The default CloudFront certificate avoids domain and ACM costs. The temporary
+edge-to-ALB hop remains HTTP, so use only synthetic demo identities until an
+owned domain enables end-to-end TLS at the ALB.
+
 Run the web image as one Fargate service now. When the background worker is
 enabled, keep the same application image and add a second service:
 

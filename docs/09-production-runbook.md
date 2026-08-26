@@ -91,6 +91,8 @@ service stack first and then the foundation stack:
 ```bash
 aws cloudformation delete-stack --stack-name imkan-staging-service
 aws cloudformation wait stack-delete-complete --stack-name imkan-staging-service
+aws cloudformation delete-stack --stack-name imkan-staging-edge
+aws cloudformation wait stack-delete-complete --stack-name imkan-staging-edge
 aws cloudformation delete-stack --stack-name imkan-staging-foundation
 aws cloudformation wait stack-delete-complete --stack-name imkan-staging-foundation
 ```
@@ -180,6 +182,12 @@ Delete the local secret file securely. Normal managers must subsequently be
 created through pending registration and activation, not through this command.
 
 ## 5. Staging acceptance
+
+Use the `HttpsUrl` output from `imkan-staging-edge` for every browser test. The
+CloudFront hostname supplies HTTPS without an owned domain. Never enter real
+personal data or reuse a real password: the disposable configuration encrypts
+viewer-to-edge traffic, while the CloudFront-to-ALB origin hop is HTTP until a
+domain and ALB certificate are attached.
 
 - CI is green for the deployed commit and ECR image scanning has no critical
   finding.

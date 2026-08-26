@@ -1,0 +1,72 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "IMKAN no-domain HTTPS edge for the disposable staging demo.",
+  "Parameters": {
+    "EnvironmentName": {
+      "Type": "String",
+      "Default": "imkan-staging",
+      "AllowedPattern": "[a-z][a-z0-9-]{2,30}"
+    }
+  },
+  "Resources": {
+    "SecurityHeadersPolicy": {
+      "Type": "AWS::CloudFront::ResponseHeadersPolicy",
+      "Properties": {
+        "ResponseHeadersPolicyConfig": {
+          "Name": { "Fn::Sub": "${EnvironmentName}-security-headers" },
+          "SecurityHeadersConfig": {
+            "ContentTypeOptions": { "Override": true },
+            "FrameOptions": { "FrameOption": "DENY", "Override": true },
+            "ReferrerPolicy": { "ReferrerPolicy": "strict-origin-when-cross-origin", "Override": true },
+            "StrictTransportSecurity": {
+              "AccessControlMaxAgeSec": 31536000,
+              "IncludeSubdomains": false,
+              "Override": true,
+              "Preload": false
+            },
+            "XSSProtection": { "ModeBlock": true, "Override": true, "Protection": true }
+          }
+        }
+      }
+    },
+    "Distribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Comment": { "Fn::Sub": "${EnvironmentName} HTTPS demo edge" },
+          "DefaultCacheBehavior": {
+            "AllowedMethods": ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"],
+            "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+            "CachedMethods": ["GET", "HEAD", "OPTIONS"],
+            "Compress": true,
+            "OriginRequestPolicyId": "216adef6-5c7f-47e4-b989-5492eafa07d3",
+            "ResponseHeadersPolicyId": { "Ref": "SecurityHeadersPolicy" },
+            "TargetOriginId": "ImkanAlb",
+            "ViewerProtocolPolicy": "redirect-to-https"
+          },
+          "Enabled": true,
+          "HttpVersion": "http2and3",
+          "IPV6Enabled": true,
+          "Origins": [{
+            "CustomOriginConfig": {
+              "HTTPPort": 80,
+              "OriginKeepaliveTimeout": 5,
+              "OriginProtocolPolicy": "http-only",
+              "OriginReadTimeout": 30
+            },
+            "DomainName": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-AlbDnsName" } },
+            "Id": "ImkanAlb"
+          }],
+          "PriceClass": "PriceClass_100",
+          "ViewerCertificate": { "CloudFrontDefaultCertificate": true }
+        },
+        "Tags": [{ "Key": "Environment", "Value": { "Ref": "EnvironmentName" } }]
+      }
+    }
+  },
+  "Outputs": {
+    "DistributionDomainName": { "Value": { "Fn::GetAtt": ["Distribution", "DomainName"] } },
+    "DistributionId": { "Value": { "Ref": "Distribution" } },
+    "HttpsUrl": { "Value": { "Fn::Sub": "https://${Distribution.DomainName}" } }
+  }
+}
