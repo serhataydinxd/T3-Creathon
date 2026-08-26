@@ -148,6 +148,7 @@ jobs:
 
       - name: Register the migration release without changing web traffic
         env:
+          CLUSTER: ${{ steps.foundation.outputs.cluster }}
           DESIRED_COUNT: ${{ inputs.desired_count }}
         run: |
           WEB_TAG="web-$GITHUB_SHA"
@@ -155,8 +156,9 @@ jobs:
           if aws cloudformation describe-stacks --stack-name "$SERVICE_STACK" >/dev/null 2>&1; then
             CURRENT_WEB_TAG=$(aws cloudformation describe-stacks --stack-name "$SERVICE_STACK" \
               --query "Stacks[0].Parameters[?ParameterKey=='WebImageTag'].ParameterValue | [0]" --output text)
-            CURRENT_DESIRED=$(aws cloudformation describe-stacks --stack-name "$SERVICE_STACK" \
-              --query "Stacks[0].Parameters[?ParameterKey=='DesiredCount'].ParameterValue | [0]" --output text)
+            CURRENT_DESIRED=$(aws ecs describe-services \
+              --cluster "$CLUSTER" --services "$ENVIRONMENT_NAME-web" \
+              --query 'services[0].desiredCount' --output text)
           else
             CURRENT_WEB_TAG="$WEB_TAG"
             CURRENT_DESIRED=0
