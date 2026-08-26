@@ -9,9 +9,13 @@ while generation itself remains in replay mode.
 The no-domain staging demo is served through a CloudFront-assigned HTTPS URL.
 CloudFront redirects viewers to TLS, disables caching for authenticated dynamic
 content, and forwards request headers, cookies and query strings to the ALB.
-The default CloudFront certificate avoids domain and ACM costs. The temporary
-edge-to-ALB hop remains HTTP, so use only synthetic demo identities until an
-owned domain enables end-to-end TLS at the ALB.
+The default CloudFront certificate avoids domain and ACM costs. While no
+certificate is attached to the ALB, its security group admits only the
+`com.amazonaws.global.cloudfront.origin-facing` managed prefix list, so the
+plaintext listener is not reachable from the open internet and the HTTPS edge
+cannot be bypassed. The edge-to-ALB hop itself is still HTTP inside AWS, so use
+only synthetic demo identities until an owned domain enables end-to-end TLS at
+the ALB.
 
 Run the web image as one Fargate service now. When the background worker is
 enabled, keep the same application image and add a second service:

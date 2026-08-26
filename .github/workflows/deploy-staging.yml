@@ -76,7 +76,19 @@ jobs:
             aws cloudformation wait stack-delete-complete --stack-name "$FOUNDATION_STACK"
           fi
 
+      - name: Resolve the CloudFront origin prefix list
+        id: cloudfront_ranges
+        run: |
+          PREFIX_LIST_ID=$(aws ec2 describe-managed-prefix-lists \
+            --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing \
+            --query 'PrefixLists[0].PrefixListId' --output text)
+          test -n "$PREFIX_LIST_ID"
+          test "$PREFIX_LIST_ID" != "None"
+          echo "prefix_list_id=$PREFIX_LIST_ID" >> "$GITHUB_OUTPUT"
+
       - name: Deploy or update the foundation
+        env:
+          CLOUDFRONT_PREFIX_LIST_ID: ${{ steps.cloudfront_ranges.outputs.prefix_list_id }}
         run: |
           aws cloudformation deploy \
             --stack-name "$FOUNDATION_STACK" \
@@ -87,6 +99,7 @@ jobs:
             --parameter-overrides \
               EnvironmentName="$ENVIRONMENT_NAME" \
               CertificateArn="" \
+              CloudFrontPrefixListId="$CLOUDFRONT_PREFIX_LIST_ID" \
               DatabaseDeletionProtection=false \
               DatabaseMultiAz=false
 

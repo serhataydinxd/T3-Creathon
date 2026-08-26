@@ -45,3 +45,78 @@ describe("AWS HTTPS edge configuration", () => {
     expect(config.Origins[0].CustomOriginConfig.OriginProtocolPolicy).toBe("http-only");
   });
 });
+
+type FoundationTemplate = {
+  Parameters: Record<string, { AllowedPattern?: string; Default?: string }>;
+  Conditions: Record<string, unknown>;
+  Resources: {
+    LoadBalancerSecurityGroup: {
+      Properties: {
+        SecurityGroupIngress: {
+          "Fn::If": [
+            string,
+            Array<{
+              FromPort: number;
+              ToPort: number;
+              CidrIp?: string;
+              SourcePrefixListId?: { Ref: string };
+            }>,
+            Array<{ FromPort: number; CidrIp?: string }>,
+          ];
+        };
+      };
+    };
+  };
+};
+
+const foundation = JSON.parse(
+  readFileSync(new URL("../infra/aws/foundation.json", import.meta.url), "utf8"),
+) as FoundationTemplate;
+
+const deployWorkflow = readFileSync(
+  new URL("../.github/workflows/deploy-staging.yml", import.meta.url),
+  "utf8",
+);
+
+const deployRole = readFileSync(
+  new URL("../infra/aws/github-oidc-role.json", import.meta.url),
+  "utf8",
+);
+
+describe("ALB exposure without an owned domain", () => {
+  const ingress =
+    foundation.Resources.LoadBalancerSecurityGroup.Properties.SecurityGroupIngress;
+  const [condition, restricted, openToInternet] = ingress["Fn::If"];
+
+  it("admits only the CloudFront edge while the ALB has no certificate", () => {
+    expect(condition).toBe("RestrictAlbToCloudFront");
+    expect(foundation.Conditions.RestrictAlbToCloudFront).toBeDefined();
+    expect(restricted).toHaveLength(1);
+    expect(restricted[0].SourcePrefixListId).toEqual({
+      Ref: "CloudFrontPrefixListId",
+    });
+    expect(restricted[0].FromPort).toBe(80);
+    expect(restricted.some((rule) => rule.CidrIp === "0.0.0.0/0")).toBe(false);
+  });
+
+  it("keeps public ingress available once a certificate terminates TLS at the ALB", () => {
+    expect(openToInternet.some((rule) => rule.FromPort === 443)).toBe(true);
+  });
+
+  it("rejects a malformed prefix list identifier", () => {
+    expect(foundation.Parameters.CloudFrontPrefixListId.AllowedPattern).toBe(
+      "(pl-[0-9a-f]{4,20})?",
+    );
+    expect(foundation.Parameters.CloudFrontPrefixListId.Default).toBe("");
+  });
+
+  it("resolves the prefix list during deployment with read-only permission", () => {
+    expect(deployWorkflow).toContain(
+      "com.amazonaws.global.cloudfront.origin-facing",
+    );
+    expect(deployWorkflow).toContain(
+      'CloudFrontPrefixListId="$CLOUDFRONT_PREFIX_LIST_ID"',
+    );
+    expect(deployRole).toContain("ec2:DescribeManagedPrefixLists");
+  });
+});

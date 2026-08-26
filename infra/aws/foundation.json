@@ -12,6 +12,12 @@
       "Default": "",
       "Description": "Optional ACM certificate ARN. Empty keeps the staging ALB on HTTP only."
     },
+    "CloudFrontPrefixListId": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "(pl-[0-9a-f]{4,20})?",
+      "Description": "Managed prefix list for CloudFront origin-facing ranges. Set with no certificate so only the HTTPS edge can reach the ALB."
+    },
     "DatabaseClass": {
       "Type": "String",
       "Default": "db.t4g.micro",
@@ -30,6 +36,12 @@
   },
   "Conditions": {
     "HasCertificate": { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "CertificateArn" }, ""] }] },
+    "RestrictAlbToCloudFront": {
+      "Fn::And": [
+        { "Fn::Equals": [{ "Ref": "CertificateArn" }, ""] },
+        { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "CloudFrontPrefixListId" }, ""] }] }
+      ]
+    },
     "ProtectDatabase": { "Fn::Equals": [{ "Ref": "DatabaseDeletionProtection" }, "true"] },
     "UseMultiAzDatabase": { "Fn::Equals": [{ "Ref": "DatabaseMultiAz" }, "true"] }
   },
@@ -114,10 +126,24 @@
       "Properties": {
         "GroupDescription": "Public HTTP and HTTPS ingress to the IMKAN ALB",
         "VpcId": { "Ref": "Vpc" },
-        "SecurityGroupIngress": [
-          { "IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "CidrIp": "0.0.0.0/0" },
-          { "IpProtocol": "tcp", "FromPort": 443, "ToPort": 443, "CidrIp": "0.0.0.0/0" }
-        ]
+        "SecurityGroupIngress": {
+          "Fn::If": [
+            "RestrictAlbToCloudFront",
+            [
+              {
+                "IpProtocol": "tcp",
+                "FromPort": 80,
+                "ToPort": 80,
+                "SourcePrefixListId": { "Ref": "CloudFrontPrefixListId" },
+                "Description": "Only the CloudFront HTTPS edge may reach the ALB"
+              }
+            ],
+            [
+              { "IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "CidrIp": "0.0.0.0/0" },
+              { "IpProtocol": "tcp", "FromPort": 443, "ToPort": 443, "CidrIp": "0.0.0.0/0" }
+            ]
+          ]
+        }
       }
     },
     "EcsSecurityGroup": {

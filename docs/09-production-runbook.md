@@ -190,10 +190,12 @@ created through pending registration and activation, not through this command.
 ## 5. Staging acceptance
 
 Use the `HttpsUrl` output from `imkan-staging-edge` for every browser test. The
-CloudFront hostname supplies HTTPS without an owned domain. Never enter real
-personal data or reuse a real password: the disposable configuration encrypts
-viewer-to-edge traffic, while the CloudFront-to-ALB origin hop is HTTP until a
-domain and ALB certificate are attached.
+CloudFront hostname supplies HTTPS without an owned domain, and the ALB accepts
+traffic only from CloudFront origin ranges, so `AlbDnsName` is expected to time
+out from a browser. Never enter real personal data or reuse a real password: the
+disposable configuration encrypts viewer-to-edge traffic, while the
+CloudFront-to-ALB origin hop is HTTP until a domain and ALB certificate are
+attached.
 
 - CI is green for the deployed commit and ECR image scanning has no critical
   finding.
