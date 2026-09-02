@@ -40,21 +40,36 @@ function abortError() {
 
 const LIVE_ENV = {
   APP_MODE: "live",
-  DEEPSEEK_API_KEY: "test-key",
-  DEEPSEEK_BASE_URL: "https://api.example.invalid/v1",
-  DEEPSEEK_MODEL: "deepseek-v4-flash",
+  LLM_API_KEY: "test-key",
+  LLM_BASE_URL: "https://api.example.invalid/v1",
+  LLM_MODEL: "test-model",
 };
 
 describe("live generation configuration", () => {
   it("stays in replay unless the mode and the key are both present", () => {
     expect(liveGenerationEnabled({})).toBe(false);
     expect(liveGenerationEnabled({ APP_MODE: "live" })).toBe(false);
-    expect(liveGenerationEnabled({ DEEPSEEK_API_KEY: "k" })).toBe(false);
-    expect(liveGenerationEnabled({ APP_MODE: "replay", DEEPSEEK_API_KEY: "k" })).toBe(false);
+    expect(liveGenerationEnabled({ LLM_API_KEY: "k" })).toBe(false);
+    expect(liveGenerationEnabled({ APP_MODE: "replay", LLM_API_KEY: "k" })).toBe(false);
     expect(liveGenerationEnabled(LIVE_ENV)).toBe(true);
   });
 
-  it("defaults the endpoint and model, and trims a trailing slash", () => {
+  it("prefers neutral provider variables and trims a trailing slash", () => {
+    expect(
+      readProviderConfig({
+        LLM_API_KEY: "new-key",
+        LLM_BASE_URL: "https://new.test/v1/",
+        LLM_MODEL: "new-model",
+        DEEPSEEK_API_KEY: "legacy-key",
+      }),
+    ).toEqual({
+      apiKey: "new-key",
+      baseUrl: "https://new.test/v1",
+      model: "new-model",
+    });
+  });
+
+  it("keeps the legacy DeepSeek configuration working", () => {
     expect(readProviderConfig({ DEEPSEEK_API_KEY: "k" })).toEqual({
       apiKey: "k",
       baseUrl: "https://api.b.ai/v1",
@@ -125,7 +140,32 @@ describe("generateWorkshopPlan never fails a demo", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://api.example.invalid/v1/chat/completions");
-    expect(JSON.parse(String(init.body))).toMatchObject({ model: "deepseek-v4-flash", stream: false });
+    expect(JSON.parse(String(init.body))).toMatchObject({ model: "test-model", stream: false });
+    vi.unstubAllGlobals();
+  });
+
+  it("uses Gemini low thinking without deprecated temperature sampling", async () => {
+    const fetchSpy = stubProvider(authoredFixture());
+    vi.stubGlobal("fetch", fetchSpy);
+    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, {
+      APP_MODE: "live",
+      LLM_API_KEY: "gemini-key",
+      LLM_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+      LLM_MODEL: "gemini-3.7-flash",
+    });
+
+    expect(plan.mode).toBe("LIVE");
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    );
+    const request = JSON.parse(String(init.body));
+    expect(request).toMatchObject({
+      model: "gemini-3.7-flash",
+      stream: false,
+      extra_body: { google: { thinking_config: { thinking_level: "low" } } },
+    });
+    expect(request).not.toHaveProperty("temperature");
     vi.unstubAllGlobals();
   });
 

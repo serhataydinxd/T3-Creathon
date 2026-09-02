@@ -179,7 +179,7 @@ jobs:
       - name: Store the generation provider key
         id: provider_secret
         env:
-          PROVIDER_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          PROVIDER_API_KEY: ${{ secrets.LLM_API_KEY || secrets.DEEPSEEK_API_KEY }}
         run: |
           if [ -z "$PROVIDER_API_KEY" ]; then
             echo "No provider key configured; the service stays in replay mode."
@@ -208,6 +208,8 @@ jobs:
           DESIRED_COUNT: ${{ inputs.desired_count }}
           APP_MODE: ${{ inputs.app_mode }}
           PROVIDER_SECRET_ARN: ${{ steps.provider_secret.outputs.arn }}
+          PROVIDER_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.b.ai/v1' }}
+          PROVIDER_MODEL: ${{ vars.LLM_MODEL || 'deepseek-v4-flash' }}
         run: |
           WEB_TAG="web-$GITHUB_SHA"
           MIGRATION_TAG="migration-$GITHUB_SHA"
@@ -237,7 +239,9 @@ jobs:
               MigrationImageTag="$MIGRATION_TAG" \
               DesiredCount="$CURRENT_DESIRED" \
               AppMode="$APP_MODE" \
-              ProviderSecretArn="$PROVIDER_SECRET_ARN"
+              ProviderSecretArn="$PROVIDER_SECRET_ARN" \
+              ProviderBaseUrl="$PROVIDER_BASE_URL" \
+              ProviderModel="$PROVIDER_MODEL"
 
       - name: Run database migrations
         env:
@@ -281,9 +285,12 @@ jobs:
 
       - name: Deploy the web image after migrations succeed
         env:
+          CLUSTER: ${{ steps.foundation.outputs.cluster }}
           DESIRED_COUNT: ${{ inputs.desired_count }}
           APP_MODE: ${{ inputs.app_mode }}
           PROVIDER_SECRET_ARN: ${{ steps.provider_secret.outputs.arn }}
+          PROVIDER_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.b.ai/v1' }}
+          PROVIDER_MODEL: ${{ vars.LLM_MODEL || 'deepseek-v4-flash' }}
         run: |
           aws cloudformation deploy \
             --stack-name "$SERVICE_STACK" \
@@ -296,7 +303,18 @@ jobs:
               MigrationImageTag="migration-$GITHUB_SHA" \
               DesiredCount="$DESIRED_COUNT" \
               AppMode="$APP_MODE" \
-              ProviderSecretArn="$PROVIDER_SECRET_ARN"
+              ProviderSecretArn="$PROVIDER_SECRET_ARN" \
+              ProviderBaseUrl="$PROVIDER_BASE_URL" \
+              ProviderModel="$PROVIDER_MODEL"
+          # Secrets are injected only when an ECS task starts. Force a rolling
+          # restart so rotating LLM_API_KEY takes effect even at the same SHA.
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "$ENVIRONMENT_NAME-web" \
+            --force-new-deployment >/dev/null
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER" \
+            --services "$ENVIRONMENT_NAME-web"
 
       - name: Smoke the deployed health endpoint
         env:

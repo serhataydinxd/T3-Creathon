@@ -3,7 +3,11 @@ import "server-only";
 import type { Finding, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 import { generateWorkshop } from "@/server/domain/generator";
 import { authorWorkshop } from "./authoring";
-import { ProviderError, createDeepSeekProvider, readProviderConfig } from "./provider";
+import {
+  ProviderError,
+  createOpenAICompatibleProvider,
+  readProviderConfig,
+} from "./provider";
 
 // Kept below the CloudFront origin read timeout so a slow provider degrades to
 // the replay plan inside the app instead of surfacing as a gateway error.
@@ -63,7 +67,7 @@ export async function generateWorkshopPlan(
   const config = readProviderConfig(env);
   if (!config) return skeleton;
   const timeoutMs = Number(env.AI_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
-  const provider = createDeepSeekProvider(config);
+  const provider = createOpenAICompatibleProvider(config);
   const deadline = Date.now() + timeoutMs;
   let reason = "UNKNOWN";
 

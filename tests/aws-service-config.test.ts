@@ -151,10 +151,21 @@ describe("generation provider wiring", () => {
     expect(service.Parameters.ProviderSecretArn.Default).toBe("");
     const [condition, withSecret, withoutSecret] = container.Secrets["Fn::If"];
     expect(condition).toBe("HasProviderSecret");
-    expect(withSecret.map((entry) => entry.Name)).toContain("DEEPSEEK_API_KEY");
-    expect(withoutSecret.map((entry) => entry.Name)).not.toContain("DEEPSEEK_API_KEY");
+    expect(withSecret.map((entry) => entry.Name)).toContain("LLM_API_KEY");
+    expect(withoutSecret.map((entry) => entry.Name)).not.toContain("LLM_API_KEY");
     // The key must never be passed as a plain task environment variable.
-    expect(container.Environment.map((entry) => entry.Name)).not.toContain("DEEPSEEK_API_KEY");
+    expect(container.Environment.map((entry) => entry.Name)).not.toContain("LLM_API_KEY");
+  });
+
+  it("passes the provider endpoint and model as non-secret configuration", () => {
+    expect(container.Environment.find((entry) => entry.Name === "LLM_BASE_URL")?.Value).toEqual({
+      Ref: "ProviderBaseUrl",
+    });
+    expect(container.Environment.find((entry) => entry.Name === "LLM_MODEL")?.Value).toEqual({
+      Ref: "ProviderModel",
+    });
+    expect(service.Parameters.ProviderBaseUrl.Default).toBe("https://api.b.ai/v1");
+    expect(service.Parameters.ProviderModel.Default).toBe("deepseek-v4-flash");
   });
 
   it("lets the execution role read only the generation secret it needs", () => {
@@ -175,6 +186,9 @@ describe("generation provider wiring", () => {
     expect(workflow).toContain("$ENVIRONMENT_NAME/generation-provider");
     expect(workflow).toContain("secretsmanager put-secret-value");
     expect(workflow).toContain('AppMode="$APP_MODE"');
+    expect(workflow).toContain('ProviderBaseUrl="$PROVIDER_BASE_URL"');
+    expect(workflow).toContain('ProviderModel="$PROVIDER_MODEL"');
+    expect(workflow).toContain("--force-new-deployment");
     // An absent key must leave the service in replay instead of failing the deploy.
     expect(workflow).toContain("the service stays in replay mode");
   });

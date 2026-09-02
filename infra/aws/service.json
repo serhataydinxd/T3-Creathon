@@ -28,6 +28,18 @@
       "AllowedPattern": "(arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:.+)?",
       "Description": "Secrets Manager ARN holding the generation API key. Empty keeps the service in replay."
     },
+    "ProviderBaseUrl": {
+      "Type": "String",
+      "Default": "https://api.b.ai/v1",
+      "AllowedPattern": "https://.+",
+      "Description": "OpenAI-compatible provider base URL without the chat/completions suffix."
+    },
+    "ProviderModel": {
+      "Type": "String",
+      "Default": "deepseek-v4-flash",
+      "AllowedPattern": "[A-Za-z0-9._:/-]+",
+      "Description": "Provider model identifier."
+    },
     "DesiredCount": {
       "Type": "Number",
       "Default": 1,
@@ -67,6 +79,8 @@
             { "Name": "DB_NAME", "Value": "imkan" },
             { "Name": "DB_PORT", "Value": "5432" },
             { "Name": "HOSTNAME", "Value": "0.0.0.0" },
+            { "Name": "LLM_BASE_URL", "Value": { "Ref": "ProviderBaseUrl" } },
+            { "Name": "LLM_MODEL", "Value": { "Ref": "ProviderModel" } },
             { "Name": "NODE_ENV", "Value": "production" },
             { "Name": "PORT", "Value": "3000" }
           ],
@@ -87,7 +101,7 @@
                   }
                 },
                 {
-                  "Name": "DEEPSEEK_API_KEY",
+                  "Name": "LLM_API_KEY",
                   "ValueFrom": { "Fn::Sub": ["${Arn}:apiKey::", { "Arn": { "Ref": "ProviderSecretArn" } }] }
                 }
               ],

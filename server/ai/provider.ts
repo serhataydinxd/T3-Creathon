@@ -67,7 +67,7 @@ type ChatCompletion = {
   usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
-export type DeepSeekConfig = {
+export type OpenAICompatibleConfig = {
   apiKey: string;
   baseUrl: string;
   model: string;
@@ -75,22 +75,34 @@ export type DeepSeekConfig = {
 
 export function readProviderConfig(
   env: Readonly<Record<string, string | undefined>>,
-): DeepSeekConfig | null {
-  const apiKey = env.DEEPSEEK_API_KEY?.trim();
+): OpenAICompatibleConfig | null {
+  const apiKey = env.LLM_API_KEY?.trim() || env.DEEPSEEK_API_KEY?.trim();
   if (!apiKey) return null;
   return {
     apiKey,
-    baseUrl: (env.DEEPSEEK_BASE_URL?.trim() || "https://api.b.ai/v1").replace(/\/+$/, ""),
-    model: env.DEEPSEEK_MODEL?.trim() || "deepseek-v4-flash",
+    baseUrl: (
+      env.LLM_BASE_URL?.trim() ||
+      env.DEEPSEEK_BASE_URL?.trim() ||
+      "https://api.b.ai/v1"
+    ).replace(/\/+$/, ""),
+    model: env.LLM_MODEL?.trim() || env.DEEPSEEK_MODEL?.trim() || "deepseek-v4-flash",
   };
 }
 
-export function createDeepSeekProvider(
-  config: DeepSeekConfig,
+function isGemini(config: OpenAICompatibleConfig): boolean {
+  return (
+    config.baseUrl.includes("generativelanguage.googleapis.com") ||
+    config.model.toLowerCase().startsWith("gemini-")
+  );
+}
+
+export function createOpenAICompatibleProvider(
+  config: OpenAICompatibleConfig,
   fetchImpl: typeof fetch = fetch,
 ): LLMProvider {
+  const gemini = isGemini(config);
   return {
-    name: `deepseek:${config.model}`,
+    name: `openai-compatible:${config.model}`,
     async generate({ schema, system, user, timeoutMs, maxOutputTokens }) {
       const startedAt = Date.now();
       const controller = new AbortController();
@@ -117,7 +129,17 @@ export function createDeepSeekProvider(
             // their reasoning to fill whatever room they are given, so too
             // small a budget leaves nothing for the answer and the completion
             // arrives truncated or empty. Callers pass real headroom.
-            temperature: 0.4,
+            // Gemini 3.7 rejects legacy sampling controls. Low thinking keeps
+            // this bounded authoring request comfortably inside the edge
+            // timeout while other OpenAI-compatible providers keep the
+            // previously tested temperature.
+            ...(gemini
+              ? {
+                  extra_body: {
+                    google: { thinking_config: { thinking_level: "low" } },
+                  },
+                }
+              : { temperature: 0.4 }),
             max_tokens: maxOutputTokens,
           }),
         });
