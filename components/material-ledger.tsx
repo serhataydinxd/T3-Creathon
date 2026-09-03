@@ -5,8 +5,9 @@ const KIND_LABEL = { consumable: "Sarf", reusable: "Kalıcı" } as const;
 export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
   const lines = plan.materialPlan ?? [];
   if (lines.length === 0) return null;
+  const knowsInventory = lines.every((line) => typeof line.inInventory === "boolean");
   // Only what the teacher said they do not have counts as a purchase.
-  const toBuy = lines.filter((line) => !line.inInventory);
+  const toBuy = knowsInventory ? lines.filter((line) => !line.inInventory) : [];
   const costs = plan.costs;
   return (
     <section className="material-ledger" data-testid="material-ledger">
@@ -39,9 +40,13 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
                 <td>{line.unitCostTry} ₺</td>
                 <td>{line.totalCostTry} ₺</td>
                 <td>
-                  <span className={line.inInventory ? "supply-tag held" : "supply-tag buy"}>
-                    {line.inInventory ? "Envanterinizde" : "Temin edilmeli"}
-                  </span>
+                  {knowsInventory ? (
+                    <span className={line.inInventory ? "supply-tag held" : "supply-tag buy"}>
+                      {line.inInventory ? "Envanterinizde" : "Temin edilmeli"}
+                    </span>
+                  ) : (
+                    <span className="ledger-basis">—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -51,7 +56,7 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
               <th scope="row">Tahmini toplam</th>
               <td colSpan={5} />
               <td>{plan.estimatedCostTry} ₺</td>
-              <td>{toBuy.length === 0 ? "Envanterden karşılanıyor" : `${toBuy.length} kalem alınacak`}</td>
+              <td>{!knowsInventory ? "" : toBuy.length === 0 ? "Envanterden karşılanıyor" : `${toBuy.length} kalem alınacak`}</td>
             </tr>
           </tfoot>
         </table>
@@ -77,9 +82,11 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
       )}
       <p className="ledger-note">
         Miktarlar {plan.groupCount} grup ve {plan.profile.groupSize} kişilik grup büyüklüğü için hesaplandı.
-        {toBuy.length === 0
-          ? " İşaretlediğiniz malzemeler listenin tamamını karşılıyor."
-          : ` Envanterinizde bulunmayan kalemler: ${toBuy.map((line) => line.label).join(", ")}.`}
+        {!knowsInventory
+          ? ""
+          : toBuy.length === 0
+            ? " İşaretlediğiniz malzemeler listenin tamamını karşılıyor."
+            : ` Envanterinizde bulunmayan kalemler: ${toBuy.map((line) => line.label).join(", ")}.`}
       </p>
     </section>
   );
