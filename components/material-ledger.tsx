@@ -13,7 +13,10 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
     <section className="material-ledger" data-testid="material-ledger">
       <div className="ledger-heading">
         <div><span className="overline">Malzeme listesi</span><h3>Sınıf için gereken malzemeler</h3></div>
-        <span>{plan.groupCount} grup · {plan.profile.classSize} öğrenci · {plan.estimatedCostTry} ₺ tahmini</span>
+        <span>
+          {plan.groupCount} grup · {plan.profile.classSize} öğrenci
+          {costs ? ` · ${costs.acquisitionTry} ₺ temin · ${costs.lessonTry} ₺ sarf` : ` · ${plan.estimatedCostTry} ₺ tahmini`}
+        </span>
       </div>
       <div className="ledger-scroll">
         <table>
@@ -25,7 +28,7 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
               <th scope="col">Grup başına</th>
               <th scope="col">Sınıf toplamı</th>
               <th scope="col">Birim fiyat</th>
-              <th scope="col">Toplam</th>
+              <th scope="col">Liste değeri</th>
               <th scope="col">Durum</th>
             </tr>
           </thead>
@@ -53,7 +56,7 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
           </tbody>
           <tfoot>
             <tr>
-              <th scope="row">Tahmini toplam</th>
+              <th scope="row">Liste değeri toplamı</th>
               <td colSpan={5} />
               <td>{plan.estimatedCostTry} ₺</td>
               <td>{!knowsInventory ? "" : toBuy.length === 0 ? "Envanterden karşılanıyor" : `${toBuy.length} kalem alınacak`}</td>

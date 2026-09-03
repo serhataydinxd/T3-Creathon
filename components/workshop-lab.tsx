@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 import { MaterialLedger } from "@/components/material-ledger";
 import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
-import { MATERIAL_OPTIONS } from "@/server/content/materials";
+import { INVENTORY_PRESETS, INVENTORY_PRESET_IDS, MATERIAL_OPTIONS } from "@/server/content/materials";
+import { CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
 type View = "configure" | "generating" | "result";
@@ -40,6 +41,7 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
   const [saving, setSaving] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [activeStage, setActiveStage] = useState(0);
+  const selectedOutcome = CURRICULUM[(profile.outcomeId ?? OUTCOME_IDS[0]) as keyof typeof CURRICULUM];
   const profileFindings = validateProfile(profile);
   const profileBlocked = profileFindings.some((finding) => finding.severity === "blocker");
 
@@ -119,13 +121,32 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
             {generationError && <div className="error-notice" role="alert"><CircleAlert />{generationError}</div>}
             <section className="panel objective-panel">
               <div className="panel-kicker"><LockKeyhole size={17} /> 01 · Kazanım Kilidi</div>
-              <span className="field-label">Onaylı öğrenme kazanımı</span>
-              <div className="locked-select">
-                <span><small>F.7.7.1.1</small> Seri ve paralel bağlı ampullerden oluşan bir devre şeması çizer.</span>
+              <label className="field-label" htmlFor="outcome-select">Onaylı öğrenme çıktısı</label>
+              <select
+                id="outcome-select"
+                data-testid="outcome-select"
+                className="outcome-select"
+                value={profile.outcomeId ?? OUTCOME_IDS[0]}
+                onChange={(event) => update("outcomeId", event.target.value)}
+              >
+                {OUTCOME_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {CURRICULUM[id].outcome.unitOrder}. {CURRICULUM[id].outcome.unit} · {CURRICULUM[id].outcome.code}
+                  </option>
+                ))}
+              </select>
+              <div className="locked-select" data-testid="objective-lock-preview">
+                <span><small>{selectedOutcome.outcome.code}</small> {selectedOutcome.outcome.canonicalText}</span>
                 <LockKeyhole size={18} />
               </div>
+              <p className="panel-help">
+                {selectedOutcome.outcome.source.document}
+                {selectedOutcome.outcome.verification === "unverified"
+                  ? " · kaynaktan aktarıldı, uzman doğrulaması bekliyor"
+                  : " · uzman tarafından doğrulandı"}
+              </p>
               <div className="inline-fields">
-                <label><span>Sınıf düzeyi</span><select defaultValue="7"><option>7. sınıf</option></select></label>
+                <label><span>Sınıf düzeyi</span><select defaultValue="7"><option>{selectedOutcome.outcome.gradeLevel}. sınıf</option></select></label>
                 <label><span>Pedagoji modeli</span><select defaultValue="5e"><option value="5e">5E Öğrenme Döngüsü</option></select></label>
               </div>
             </section>

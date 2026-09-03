@@ -3,6 +3,7 @@ import {
   ALL_ROUTES,
   CURRICULUM,
   OUTCOME_IDS,
+  ROUTE_TIER_ORDER,
   STAGE_KEYS,
   getOutcomeContent,
   type OutcomeId,
@@ -135,14 +136,19 @@ describe("outcome × inventory matrix", () => {
 });
 
 describe("route selection", () => {
-  it("prefers the richest route the classroom can support", () => {
+  it.each(OUTCOME_IDS)("%s offers its richest route to a fully stocked classroom", (outcomeId) => {
     const equipped = generateWorkshop({
       ...DEFAULT_PROFILE,
+      outcomeId,
       hasElectricity: true,
+      hasInternet: true,
       materials: [...INVENTORY_PRESETS.workshop.materials],
       budgetTry: 100_000,
     });
-    expect(equipped.routeTier).toBe("lab");
+    const best = [...getOutcomeContent(outcomeId).routes].sort(
+      (a, b) => ROUTE_TIER_ORDER.indexOf(a.tier) - ROUTE_TIER_ORDER.indexOf(b.tier),
+    )[0];
+    expect(equipped.routeId).toBe(best.id);
     expect(equipped.rejectedRoutes).toEqual([]);
   });
 
@@ -150,31 +156,60 @@ describe("route selection", () => {
     const bare = generateWorkshop(DEFAULT_PROFILE);
     expect(bare.routeTier).toBe("minimal");
     const rejection = (bare.rejectedRoutes ?? [])[0];
-    expect(rejection.code).toBe("NO_ELECTRICITY");
-    expect(rejection.reason).toContain("elektrik");
+    expect(rejection.code).toBe("MISSING_MATERIALS");
+    expect(rejection.reason.length).toBeGreaterThan(20);
   });
 
-  it("names the missing materials when power is available but the kit is not", () => {
-    const powered = generateWorkshop({
+  it("names the materials that blocked the richer route", () => {
+    const plan = generateWorkshop({
       ...DEFAULT_PROFILE,
-      hasElectricity: true,
-      materials: ["paper", "pencil", "scissors", "tape"],
+      outcomeId: "light-and-lenses",
+      materials: ["paper", "pencil", "plastic-cup"],
     });
-    const rejection = (powered.rejectedRoutes ?? [])[0];
+    expect(plan.routeTier).toBe("minimal");
+    const rejection = (plan.rejectedRoutes ?? [])[0];
     expect(rejection.code).toBe("MISSING_MATERIALS");
-    expect(rejection.reason).toContain("Pil");
-    expect(rejection.reason).toContain("LED");
+    expect(rejection.reason).toContain("mercek");
+  });
+
+  it("refuses to plan a purchase that breaks a strict budget", () => {
+    // The guard checks what must actually be bought, so a classroom that owns
+    // nothing is stopped while one that owns its stock is not.
+    const plan = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      materials: [],
+      budgetTry: 1,
+      hardBudget: true,
+    });
+    expect(plan.findings).toContainEqual(
+      expect.objectContaining({ code: "BUDGET_EXCEEDED", severity: "blocker" }),
+    );
+  });
+
+  it("surfaces every safety constraint the route declares", () => {
+    const lens = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      outcomeId: "light-and-lenses",
+      materials: ["paper", "pencil", "plastic-cup", "convex-lens", "ruler"],
+      budgetTry: 100_000,
+    });
+    expect(lens.routeTier).toBe("lab");
+    const safety = lens.findings.filter((finding) => finding.code === "SAFETY_CONSTRAINT");
+    expect(safety.length).toBeGreaterThan(0);
+    // A lens focusing sunlight is a burn and fire hazard, so the warning must
+    // reach the teacher on the plan itself.
+    expect(safety.map((finding) => finding.message).join(" ")).toContain("Güneş");
   });
 
   it("selects deterministically for the same profile", () => {
-    const first = selectRoute("electric-circuits", DEFAULT_PROFILE);
-    const second = selectRoute("electric-circuits", DEFAULT_PROFILE);
+    const first = selectRoute("electrification", DEFAULT_PROFILE);
+    const second = selectRoute("electrification", DEFAULT_PROFILE);
     expect(first.route.id).toBe(second.route.id);
   });
 
   it("falls back to the default outcome for an unknown id", () => {
     const plan = generateWorkshop({ ...DEFAULT_PROFILE, outcomeId: "no-such-outcome" });
-    expect(plan.outcomeId).toBe("electric-circuits");
+    expect(plan.outcomeId).toBe("electrification");
   });
 });
 
@@ -183,14 +218,13 @@ describe("outcome provenance", () => {
     for (const outcomeId of OUTCOME_IDS) {
       const { outcome } = CURRICULUM[outcomeId];
       expect(["verified", "unverified"]).toContain(outcome.verification);
-      if (outcome.verification === "unverified") {
-        // Honest while the code is still awaiting a human check against the
-        // official document.
-        expect(outcome.source.document.toLowerCase()).toContain("demo");
-      } else {
-        expect(outcome.source.url).toBeTruthy();
-        expect(outcome.source.accessedOn).toBeTruthy();
-      }
+      // Every entry must be traceable whatever its verification state: the
+      // point of the corpus is that a code can be checked, not that it is
+      // already approved.
+      expect(outcome.source.document).toContain("Türkiye Yüzyılı Maarif Modeli");
+      expect(outcome.source.url).toMatch(/^https:\/\/tymm\.meb\.gov\.tr\//);
+      expect(outcome.source.accessedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(outcome.code).toMatch(/^FB\.7\.\d+\.\d+$/);
     }
   });
 });

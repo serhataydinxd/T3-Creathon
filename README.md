@@ -48,14 +48,17 @@ olarak alır ve aynı kazanıma ulaşan farklı bir yol üretir.
 
 ### Somut örnek
 
-Elektriği ve interneti olmayan, yalnızca kâğıt-kalem-makas-bandı bulunan bir
-sınıf, 30 öğrenci, 40 dakika ve 50 ₺ bütçe girildiğinde İMKÂN devre setini
-**kâğıt tabanlı insan-devresi modeliyle** değiştirir, aynı kazanımı korur ve
-14 ₺ maliyetli, 6 gruba bölünmüş, yazdırılabilir bir paket üretir.
+**FB.7.4.1 — "Ortam değiştiren ışığın izlediği yolu gözlemleyerek kırılma
+olayına yönelik bilimsel çıkarım yapabilme"** çıktısı için:
 
-Aynı sınıfa devre seti eklendiğinde ise fiziksel kurulum rotası seçilir; maliyet
-186 ₺'ye çıktığı için 50 ₺'lik kesin bütçe sınırı üretimi **bilinçli olarak
-durdurur**. Kazanım her iki senaryoda da aynıdır.
+Merceği olmayan bir sınıfta İMKÂN **su dolu şeffaf bardakla** yürütülen rotayı
+seçer, neden seçtiğini yazar ("Gerekli malzemeler envanterde yok: Yakınsak
+mercek") ve aynı çıkarımı hedefleyen, kırtasiye ile uygulanabilir bir paket
+üretir.
+
+Aynı sınıfa yakınsak mercek eklendiğinde laboratuvar rotası seçilir ve pakete
+zorunlu güvenlik uyarısı eklenir: **mercek hiçbir koşulda Güneş'e
+doğrultulmaz.** Öğrenme çıktısı her iki senaryoda da aynı kalır.
 
 ## Yapay zekâ nerede devreye giriyor?
 
@@ -101,9 +104,10 @@ Uçtan uca çalışan, herkese açık bir dikey dilim:
 - Kaynak profili formu: süre, sınıf/grup mevcudu, bütçe, elektrik, internet,
   malzeme ve erişilebilirlik
 - Dil modeliyle canlı üretim (`APP_MODE=live`) ve deterministik yedek
-- Aynı kazanım için iki gerçek rota: fiziksel devre veya onaylı kâğıt model
+- Her çıktı için en az iki gerçek rota; reddedilen rotanın nedeni yazılır
+- Rota güvenlik kısıtları (ör. mercekle Güneş'e bakma yasağı) uyarı olarak eklenir
 - Grup başına ve sınıf toplamı malzeme listesi, maliyet ve envanter durumu
-- Kazanım–kanıt izlenebilirliği olan beş aşamalı 5E planı
+- Öğrenme çıktısı–kanıt izlenebilirliği olan beş aşamalı 5E planı
 - Taslak → inceleme → onay → yayım → geri bildirim iş akışı
 - Değişmez sürüm geçmişi ve denetlenebilir durum geçişleri
 - Puan dağılımıyla sınıf geri bildirimi ve yöneticiye yeniden kullanım özeti
@@ -112,9 +116,11 @@ Uçtan uca çalışan, herkese açık bir dikey dilim:
 - Argon2id şifreleme, iptal edilebilir sunucu tabanlı oturumlar
 - HTTPS yayın, gerçek tarayıcı testleri ve erişilebilirlik denetimi
 
-**Dürüst kapsam sınırı:** şu an tek bir onaylı kazanım (F.7.7.1.1, seri ve
-paralel devre şeması) ve tek pedagoji modeli (5E) tanımlıdır. Mimari çoklu
-kazanımı destekler; referans veri kümesi genişletilmeyi bekliyor.
+**Dürüst kapsam sınırı:** korpus, **Türkiye Yüzyılı Maarif Modeli** 7. sınıf
+Fen Bilimleri programının yedi ünitesinden birer öğrenme çıktısı ve bunlara
+bağlı 14 rota içerir. Kodlar ve resmî metinler MEB'in ünite sayfalarından
+birebir aktarılmıştır ancak **alan uzmanı doğrulaması beklemektedir**; arayüz
+bu durumu her çıktının yanında gösterir. Tek pedagoji modeli (5E) tanımlıdır.
 
 ## Hızlı başlangıç
 

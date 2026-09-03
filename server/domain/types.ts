@@ -32,9 +32,18 @@ export type RouteRejection = {
   reason: string;
 };
 
-export type MaterialCategory = "kırtasiye" | "elektrik" | "sunum";
+export type MaterialCategory =
+  | "kırtasiye"
+  | "sunum"
+  | "laboratuvar"
+  | "elektrik"
+  | "optik";
 
-/** A consumable is used up by the lesson; a reusable survives it. */
+/**
+ * Whether a single delivery of the workshop uses the material up. Judged per
+ * lesson, not over the material's lifetime: a pencil wears out eventually but
+ * running one workshop does not spend it, so it counts as reusable.
+ */
 export type MaterialKind = "consumable" | "reusable";
 
 export type MaterialLine = {

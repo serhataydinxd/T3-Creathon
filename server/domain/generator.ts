@@ -89,9 +89,6 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     };
   });
 
-  // Unchanged on purpose: the budget guard still checks the full estimate, so
-  // the figures already published in the demo materials stay exactly as they
-  // were. Switching the guard to acquisition only is a one-line change here.
   const estimatedCostTry = Math.ceil(
     materialPlan.reduce((sum, line) => sum + line.totalCostTry, 0),
   );
@@ -109,20 +106,24 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
       message: "Video yerine yazdırılabilir görsel ve öğretmen anlatımı kullanıldı.",
     });
   }
-  // A route was set aside for a reason the teacher should see, and the chosen
-  // route is a substitution rather than the richest possible delivery.
-  if (rejected.length > 0) {
+  // A richer route was set aside, so the chosen one is a substitution. The
+  // wording belongs to the route: what was swapped only makes sense against
+  // the delivery that could not run.
+  if (rejected.length > 0 && route.substitutionNote) {
     findings.push({
       code: "APPROVED_SUBSTITUTION_APPLIED",
       severity: "info",
-      message: "Devre seti, güvenli kâğıt tabanlı insan-devresi modeliyle değiştirildi.",
+      message: route.substitutionNote,
     });
   }
-  if (profile.hardBudget && estimatedCostTry > profile.budgetTry) {
+  for (const note of route.safetyNotes ?? []) {
+    findings.push({ code: "SAFETY_CONSTRAINT", severity: "warning", message: note });
+  }
+  if (profile.hardBudget && costs.acquisitionTry > profile.budgetTry) {
     findings.push({
       code: "BUDGET_EXCEEDED",
       severity: "blocker",
-      message: `Tahmini ${estimatedCostTry} ₺ maliyet, ${profile.budgetTry} ₺ kesin bütçeyi aşıyor.`,
+      message: `Temin edilmesi gereken ${costs.acquisitionTry} ₺, ${profile.budgetTry} ₺ kesin bütçeyi aşıyor.`,
     });
   }
   if (profile.accessibilityNeeds.length > 0) {
@@ -170,7 +171,7 @@ export const DEFAULT_PROFILE: ResourceProfile = {
   hardBudget: true,
   hasInternet: false,
   hasElectricity: false,
-  materials: ["paper", "pencil", "scissors", "tape"],
+  materials: ["paper", "pencil", "scissors", "tape", "tissue"],
   accessibilityNeeds: ["Yüksek kontrastlı basılı materyal"],
   outcomeId: DEFAULT_OUTCOME_ID,
 };

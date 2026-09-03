@@ -11,10 +11,11 @@ test("content expert to pedagogue to manager to educator completes across real s
   await expect(page.getByTestId("finding").filter({ hasText: "APPROVED SUBSTITUTION APPLIED" })).toBeVisible();
   await expect(page.getByTestId("stage-detail-engage")).toBeVisible();
   await expect(page.getByTestId("material-ledger")).toBeVisible();
-  // Six groups of the paper route need 24 sheets in total.
-  await expect(page.getByTestId("material-line-paper")).toContainText("24");
+  // Six groups of five students, whichever route the corpus selects.
+  await expect(page.getByTestId("material-line-paper")).toBeVisible();
   // A per-learner line scales to the whole class, and the offline route needs no purchase.
   await expect(page.getByTestId("material-line-pencil")).toContainText("30");
+  await expect(page.getByTestId("cost-acquisition")).toBeVisible();
   await expect(page.getByTestId("material-ledger").locator(".supply-tag.buy")).toHaveCount(0);
   await page.getByTestId("save-draft").click();
   await expect(page).toHaveURL(/\/workshops\/[0-9a-f-]+\?created=1/);
@@ -68,7 +69,7 @@ test("content expert to pedagogue to manager to educator completes across real s
   // The reuse rollup is the manager's entry point back into a used package.
   await page.goto("/dashboard");
   const rollup = page.getByTestId("feedback-rollup");
-  await expect(rollup).toContainText("Elektrik Devreleri");
+  await expect(rollup).toContainText("Elektriklenme");
   await expect(rollup).toContainText("5 / 5");
 });
 
