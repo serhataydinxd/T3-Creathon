@@ -1,12 +1,25 @@
-import { DEMO_OBJECTIVE, MATERIALS, MATERIALS_PRICED_ON } from "./fixtures";
-import type { Finding, MaterialKey, MaterialLine, ResourceProfile, Stage, WorkshopPlan } from "./types";
+import {
+  DEFAULT_OUTCOME_ID,
+  getOutcomeContent,
+  isOutcomeId,
+  type OutcomeId,
+} from "@/server/content/curriculum";
+import { MATERIALS, MATERIALS_PRICED_ON } from "@/server/content/materials";
+import { buildStages, selectRoute } from "./routes";
+import type { Finding, MaterialLine, ResourceProfile, WorkshopPlan } from "./types";
 
-const STAGE_DISTRIBUTION = [0.12, 0.28, 0.2, 0.25, 0.15] as const;
+/**
+ * Bumped whenever the deterministic output of this module changes in a way
+ * that makes a previously generated plan stale — new or removed material
+ * fields, changed cost semantics, a changed stage allocation. Generation
+ * records carry it so a plan issued before a deploy is not silently saved
+ * against the new rules.
+ */
+export const GENERATOR_VERSION = "2026-09-03.1";
 
-function allocateMinutes(total: number): number[] {
-  const values = STAGE_DISTRIBUTION.map((ratio) => Math.max(4, Math.round(total * ratio)));
-  values[values.length - 1] += total - values.reduce((sum, value) => sum + value, 0);
-  return values;
+export function resolveOutcomeId(profile: ResourceProfile): OutcomeId {
+  const requested = profile.outcomeId;
+  return requested && isOutcomeId(requested) ? requested : DEFAULT_OUTCOME_ID;
 }
 
 export function validateProfile(profile: ResourceProfile): Finding[] {
@@ -35,130 +48,28 @@ export function validateProfile(profile: ResourceProfile): Finding[] {
   return findings;
 }
 
-export function shouldUsePhysicalCircuit(profile: ResourceProfile): boolean {
-  return (
-    profile.hasElectricity &&
-    (["battery", "led", "copper-wire"] as const).every((key) =>
-      profile.materials.includes(key),
-    )
-  );
-}
-
-function buildStages(profile: ResourceProfile, physicalCircuit: boolean): Stage[] {
-  const [engage, explore, explain, elaborate, evaluate] = allocateMinutes(
-    profile.durationMinutes,
-  );
-  return [
-    {
-      key: "engage",
-      name: "Dikkat Çekme",
-      shortName: "Merak",
-      minutes: engage,
-      title: "Aynı ampuller, neden farklı parlaklık?",
-      teacherAction:
-        "İki farklı devre görselini gösterir ve öğrencilerin kanıta dayalı tahminlerini toplar.",
-      studentAction:
-        "Bireysel tahmin yapar, ardından grup arkadaşıyla gerekçesini karşılaştırır.",
-      evidence: "Öğrenci, bağlantı biçimi ile ampul davranışı arasında test edilebilir bir ilişki kurar.",
-      materialKeys: ["paper", "pencil"],
-      objectiveConnection: "Devre şemasındaki bağlantı biçimlerini ayırt etmeye hazırlık sağlar.",
-    },
-    {
-      key: "explore",
-      name: "Keşfetme",
-      shortName: "Keşfet",
-      minutes: explore,
-      title: physicalCircuit ? "Devreyi kur, şemayı çıkar" : "İnsan devresi: bağlantıyı modelle",
-      teacherAction: physicalCircuit
-        ? "Onaylı düşük gerilim devre setini dağıtır; güvenlik ve görev kartlarını açıklar."
-        : "Seri ve paralel bağlantıyı ip halkaları yerine kâğıt şeritlerle modelleyen çevrimdışı görev kartlarını dağıtır.",
-      studentAction: physicalCircuit
-        ? "İki bağlantı biçimini kurar, gözlemini kaydeder ve her düzenek için devre şeması çizer."
-        : "Grup içinde akım yolunu canlandırır; ardından her modelin devre şemasını kâğıda çizer.",
-      evidence: "İki düzenek/model için sembolleri ve bağlantı yollarını doğru gösteren şemalar üretir.",
-      materialKeys: physicalCircuit
-        ? ["battery", "led", "copper-wire", "paper", "pencil"]
-        : ["paper", "pencil", "scissors", "tape"],
-      objectiveConnection: "Öğrenci seri ve paralel bağlantıyı doğrudan şemaya dönüştürür.",
-    },
-    {
-      key: "explain",
-      name: "Açıklama",
-      shortName: "Açıkla",
-      minutes: explain,
-      title: "Şema dili ortaklaşıyor",
-      teacherAction:
-        "Grupların çizimlerinden iki örnek seçer; devre sembolleri ve kapalı yol ölçütlerini birlikte netleştirir.",
-      studentAction: "Kendi şemasını ölçüt kartıyla kontrol eder ve bir düzeltme notu ekler.",
-      evidence: "Standart sembolleri kullanır ve seri/paralel bağlantının yol farkını sözlü açıklar.",
-      materialKeys: ["paper", "pencil"],
-      objectiveConnection: "Kazanımın beklediği şema çizme dilini görünür ve ölçülebilir hâle getirir.",
-    },
-    {
-      key: "elaborate",
-      name: "Derinleştirme",
-      shortName: "Uygula",
-      minutes: elaborate,
-      title: "Devre Dominoları",
-      teacherAction:
-        "Her gruba bağlantı parçaları, şema sembolleri ve sonuç kartlarından oluşan kes-yapıştır setini verir.",
-      studentAction:
-        "Kartları eşleştirerek geçerli seri ve paralel devreler oluşturur; rakip grubun şemasındaki hatayı bulur.",
-      evidence: "Yeni bir bağlamda geçerli bir devre şeması kurar ve hatalı bağlantıyı gerekçesiyle düzeltir.",
-      materialKeys: ["paper", "pencil", "scissors"],
-      objectiveConnection: "Şema çizme becerisini oyun içinde yeni devre örneklerine transfer eder.",
-    },
-    {
-      key: "evaluate",
-      name: "Değerlendirme",
-      shortName: "Kanıtla",
-      minutes: evaluate,
-      title: "Çıkış bileti: iki yol, iki şema",
-      teacherAction: "Her öğrenciye iki koşullu mini devre problemi verir ve ölçütlere göre hızlı kontrol yapar.",
-      studentAction: "Bir seri, bir paralel devre şeması çizer; aralarındaki temel farkı tek cümleyle yazar.",
-      evidence: "İki şemada sembol, bağlantı ve kapalı yol ölçütlerinin en az üçünü doğru karşılar.",
-      materialKeys: ["paper", "pencil"],
-      objectiveConnection: "Kazanım, bireysel şema ürünü üzerinden doğrudan ölçülür.",
-    },
-  ];
-}
-
 export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
   const findings = validateProfile(profile);
   if (findings.some((finding) => finding.severity === "blocker")) {
     throw new Error(findings.map((finding) => finding.message).join(" "));
   }
 
-  const usePhysicalCircuit = shouldUsePhysicalCircuit(profile);
-  const stages = buildStages(profile, usePhysicalCircuit);
+  const outcomeId = resolveOutcomeId(profile);
+  const content = getOutcomeContent(outcomeId);
+  const { route, rejected } = selectRoute(outcomeId, profile);
+  const stages = buildStages(outcomeId, route, profile);
   const groupCount = Math.ceil(profile.classSize / profile.groupSize);
-  // Ordered so the route-defining materials lead and shared consumables follow.
-  const requirements: Array<{ key: MaterialKey; basis: "group" | "student"; quantity: number }> =
-    usePhysicalCircuit
-      ? [
-          { key: "battery", basis: "group", quantity: 1 },
-          { key: "led", basis: "group", quantity: 2 },
-          { key: "copper-wire", basis: "group", quantity: 1 },
-          { key: "paper", basis: "group", quantity: 2 },
-          { key: "pencil", basis: "student", quantity: 1 },
-        ]
-      : [
-          { key: "paper", basis: "group", quantity: 4 },
-          { key: "pencil", basis: "student", quantity: 1 },
-          { key: "scissors", basis: "group", quantity: 1 },
-          { key: "tape", basis: "group", quantity: 0.25 },
-        ];
 
   const round = (value: number) => Math.round(value * 100) / 100;
   const inventory = new Set(profile.materials);
-  const materialPlan: MaterialLine[] = requirements.map(({ key, basis, quantity }) => {
-    const material = MATERIALS[key];
+  const materialPlan: MaterialLine[] = route.materials.map(({ materialId, basis, quantity }) => {
+    const material = MATERIALS[materialId];
     const perGroup = basis === "student" ? quantity * profile.groupSize : quantity;
     // What the teacher told us they have, not what a typical classroom stocks.
-    const inInventory = inventory.has(key);
+    const inInventory = inventory.has(materialId);
     const totalCostTry = round(material.unitCostTry * perGroup * groupCount);
     return {
-      key,
+      key: materialId,
       label: material.label,
       category: material.category,
       kind: material.kind,
@@ -177,6 +88,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
       lessonCostTry: material.kind === "consumable" ? totalCostTry : 0,
     };
   });
+
   // Unchanged on purpose: the budget guard still checks the full estimate, so
   // the figures already published in the demo materials stay exactly as they
   // were. Switching the guard to acquisition only is a one-line change here.
@@ -197,7 +109,9 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
       message: "Video yerine yazdırılabilir görsel ve öğretmen anlatımı kullanıldı.",
     });
   }
-  if (!usePhysicalCircuit) {
+  // A route was set aside for a reason the teacher should see, and the chosen
+  // route is a substitution rather than the richest possible delivery.
+  if (rejected.length > 0) {
     findings.push({
       code: "APPROVED_SUBSTITUTION_APPLIED",
       severity: "info",
@@ -220,18 +134,28 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
   }
 
   return {
-    id: "replay-electric-circuit-v1",
+    id: `${route.id}-v1`,
     mode: "REPLAY",
-    title: "Elektrik Devreleri: Aynı Kazanım, Gerçek İmkânlar",
-    objective: { ...DEMO_OBJECTIVE, locked: true },
+    title: content.title,
+    objective: {
+      id: `objective-${outcomeId}`,
+      code: content.outcome.code,
+      canonicalText: content.outcome.canonicalText,
+      source: content.outcome.source.document,
+      locked: true,
+    },
     profile,
+    outcomeId,
+    routeId: route.id,
+    routeName: route.name,
+    routeTier: route.tier,
+    rejectedRoutes: rejected,
+    generatorVersion: GENERATOR_VERSION,
     groupCount,
     estimatedCostTry,
-    materialPlan,
     costs,
-    adaptationSummary: usePhysicalCircuit
-      ? "Mevcut devre setleriyle güvenli, fiziksel kurulum temelli akış seçildi."
-      : "Devre seti ve enerji gerektirmeyen kâğıt tabanlı model; aynı şema kazanımını koruyacak biçimde seçildi.",
+    materialPlan,
+    adaptationSummary: route.adaptationSummary,
     stages,
     findings,
     generatedAt: "2026-08-24T12:00:00.000Z",
@@ -248,4 +172,5 @@ export const DEFAULT_PROFILE: ResourceProfile = {
   hasElectricity: false,
   materials: ["paper", "pencil", "scissors", "tape"],
   accessibilityNeeds: ["Yüksek kontrastlı basılı materyal"],
+  outcomeId: DEFAULT_OUTCOME_ID,
 };

@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import type { ResourceProfile, WorkshopPlan } from "@/server/domain/types";
-import { MATERIALS } from "@/server/domain/fixtures";
+import { MATERIALS } from "@/server/content/materials";
 import { ProviderError, type LLMProvider } from "./provider";
 
 const STAGE_KEYS = ["engage", "explore", "explain", "elaborate", "evaluate"] as const;

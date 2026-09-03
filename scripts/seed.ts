@@ -1,10 +1,9 @@
 import "dotenv/config";
 
-import { createHash } from "node:crypto";
 import { hashPassword } from "../server/auth/password";
 import { closeDatabase, getDb } from "../server/db/client";
-import { objectives, users } from "../server/db/schema";
-import { DEMO_OBJECTIVE } from "../server/domain/fixtures";
+import { users } from "../server/db/schema";
+import { syncOutcomes } from "../server/domain/outcome-store";
 
 const demoPassword = process.env.DEMO_PASSWORD ?? "I.mkanDemo!2026";
 const passwordHash = await hashPassword(demoPassword);
@@ -26,16 +25,7 @@ for (const seedUser of seedUsers) {
     });
 }
 
-await getDb()
-  .insert(objectives)
-  .values({
-    code: DEMO_OBJECTIVE.code,
-    canonicalText: DEMO_OBJECTIVE.canonicalText,
-    sourceUrl: "https://mufredat.meb.gov.tr/",
-    contentHash: createHash("sha256").update(DEMO_OBJECTIVE.canonicalText).digest("hex"),
-    approved: true,
-  })
-  .onConflictDoNothing();
+const codes = await syncOutcomes();
 
 await closeDatabase();
-console.info(`Seeded ${seedUsers.length} role accounts and the demo objective.`);
+console.info(`Seeded ${seedUsers.length} role accounts and ${codes.length} approved outcome(s).`);

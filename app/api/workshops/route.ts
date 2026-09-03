@@ -34,6 +34,11 @@ export async function POST(request: Request) {
     if (message === "GENERATION_RECORD_NOT_FOUND" || message === "GENERATION_RECORD_EXPIRED") {
       return NextResponse.json({ error: "Üretim kaydı bulunamadı veya süresi doldu. Atölyeyi yeniden üretin." }, { status: 409 });
     }
+    // The application was updated between generating and saving, so the plan
+    // no longer matches the rules that would be applied to it.
+    if (message === "GENERATION_RECORD_STALE") {
+      return NextResponse.json({ error: "Uygulama güncellendi. Atölyeyi yeniden üretin." }, { status: 409 });
+    }
     if (message === "GENERATION_PROFILE_MISMATCH") {
       return NextResponse.json({ error: "Koşullar üretimden sonra değişti. Atölyeyi yeniden üretin." }, { status: 409 });
     }

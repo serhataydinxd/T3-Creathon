@@ -6,6 +6,7 @@ import { requireUser } from "@/server/auth/session";
 import { listFeedbackRollup, listWorkshops } from "@/server/domain/workshops";
 import { listPendingUsers } from "@/server/domain/users";
 import { activateUserAction } from "@/app/actions/manager";
+import { OUTCOME_IDS } from "@/server/content/curriculum";
 
 export const metadata: Metadata = {
   title: 'Genel bakış',
@@ -43,7 +44,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div><FlaskConical /><strong>{workshops.length}</strong><span>Görünen paket</span></div>
           <div><Clock3 /><strong>{workshops.filter((item) => item.status === "submitted").length}</strong><span>İnceleme bekliyor</span></div>
           <div><BookOpenCheck /><strong>{workshops.filter((item) => item.status === "published").length}</strong><span>Yayımlanmış</span></div>
-          <div><Users /><strong>4</strong><span>Aktif rol</span></div>
+          <div><Users /><strong>{OUTCOME_IDS.length}</strong><span>Onaylı kazanım</span></div>
         </div>
         {user.role === "manager" && <section className="pending-users"><div className="section-heading"><div><span className="overline">Hesap güvenliği</span><h2>Onay bekleyen kayıtlar</h2></div></div>{pendingUsers.length === 0 ? <p>Onay bekleyen kullanıcı yok.</p> : pendingUsers.map((pending) => <form action={activateUserAction} key={pending.id}><div><strong>{pending.name}</strong><small>{pending.email}</small></div><input type="hidden" name="userId" value={pending.id} /><label><span>Atanacak rol</span><select name="role" defaultValue="educator"><option value="educator">Eğitimci</option><option value="content_expert">İçerik uzmanı</option><option value="pedagogue">Pedagog</option></select></label><button className="button primary" type="submit">Etkinleştir</button></form>)}</section>}
         {user.role === "manager" && feedbackRollup.length > 0 && <section className="feedback-rollup" data-testid="feedback-rollup"><div className="section-heading"><div><span className="overline">Yeniden kullanım</span><h2>Sınıf geri bildirimi özeti</h2></div><span>{feedbackRollup.reduce((sum, row) => sum + row.count, 0)} geri bildirim</span></div><div className="rollup-list">{feedbackRollup.map((row) => <Link className="rollup-row" data-testid={`rollup-${row.versionId}`} href={`/workshops/${row.versionId}`} key={row.versionId}><div><strong>{row.title}</strong><small>Sürüm {row.version}</small></div><span className="rollup-score"><Star /> {row.averageRating} / 5</span><small>{row.count} eğitimci</small><ArrowRight /></Link>)}</div></section>}

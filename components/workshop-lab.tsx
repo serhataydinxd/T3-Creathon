@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { MaterialLedger } from "@/components/material-ledger";
 import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
-import { MATERIAL_OPTIONS } from "@/server/domain/fixtures";
+import { MATERIAL_OPTIONS } from "@/server/content/materials";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
 type View = "configure" | "generating" | "result";

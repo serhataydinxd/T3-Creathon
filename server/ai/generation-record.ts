@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { and, eq, lt } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { generationRecords } from "@/server/db/schema";
+import { GENERATOR_VERSION } from "@/server/domain/generator";
 import type { ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
 /**
@@ -118,9 +119,16 @@ export async function loadGenerationRecord(input: {
   if (row.requestHash !== hashProfile(input.profile)) {
     throw new Error("GENERATION_PROFILE_MISMATCH");
   }
+  // A record stays claimable for an hour, so a deploy can land between
+  // generating and saving. Refuse a plan built by a different generator rather
+  // than persisting one that predates the current cost or material rules.
+  const plan = row.plan as WorkshopPlan;
+  if (plan.generatorVersion !== GENERATOR_VERSION) {
+    throw new Error("GENERATION_RECORD_STALE");
+  }
 
   return {
-    plan: row.plan as WorkshopPlan,
+    plan,
     mode: row.mode === "live" ? "live" : "replay",
     providerModel: row.providerModel,
   };

@@ -6,7 +6,6 @@ import { getDb } from "@/server/db/client";
 import {
   educatorFeedback,
   generationRuns,
-  objectives,
   reviews,
   users,
   versionTransitions,
@@ -14,8 +13,10 @@ import {
 } from "@/server/db/schema";
 import type { AuthUser } from "@/server/auth/session";
 import type { ResourceProfile, WorkshopPlan } from "./types";
-import { DEMO_OBJECTIVE } from "./fixtures";
+
 import { loadGenerationRecord } from "@/server/ai/generation-record";
+import { resolveOutcomeId } from "./generator";
+import { requireOutcomeRowId } from "./outcome-store";
 
 export type WorkshopRecord = {
   id: string;
@@ -61,16 +62,13 @@ export async function createDraft(
   if (plan.findings.some((finding) => finding.severity === "blocker")) throw new Error("PLAN_BLOCKED");
 
   return db.transaction(async (tx) => {
-    const [objective] = await tx
-      .select({ id: objectives.id })
-      .from(objectives)
-      .where(eq(objectives.code, DEMO_OBJECTIVE.code))
-      .limit(1);
-    if (!objective) throw new Error("OBJECTIVE_NOT_SEEDED");
+    // The plan records which corpus entry produced it, so the version is
+    // linked to that outcome rather than to whichever one happened to be first.
+    const objectiveId = await requireOutcomeRowId(tx, resolveOutcomeId(profile));
 
     const [insertedRun] = await tx
       .insert(generationRuns)
-      .values({ objectiveId: objective.id, requestedBy: user.id, idempotencyKey, requestHash, mode: plan.mode === "LIVE" ? "live" : "replay", status: "ready_for_review", request: profile, objectiveSnapshot: plan.objective })
+      .values({ objectiveId, requestedBy: user.id, idempotencyKey, requestHash, mode: plan.mode === "LIVE" ? "live" : "replay", status: "ready_for_review", request: profile, objectiveSnapshot: plan.objective })
       .onConflictDoNothing({ target: [generationRuns.requestedBy, generationRuns.idempotencyKey] })
       .returning({ id: generationRuns.id });
     if (!insertedRun) {

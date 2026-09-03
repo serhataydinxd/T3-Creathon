@@ -1,12 +1,10 @@
-export type MaterialKey =
-  | "paper"
-  | "pencil"
-  | "scissors"
-  | "tape"
-  | "battery"
-  | "led"
-  | "copper-wire"
-  | "projector";
+import type { MaterialId } from "@/server/content/materials";
+
+/**
+ * Kept as an alias so the registry stays the one place materials are declared.
+ * Adding a material to the catalogue widens this automatically.
+ */
+export type MaterialKey = MaterialId;
 
 export type ResourceProfile = {
   durationMinutes: 40 | 60 | 80;
@@ -18,6 +16,20 @@ export type ResourceProfile = {
   hasElectricity: boolean;
   materials: MaterialKey[];
   accessibilityNeeds: string[];
+  /**
+   * Which approved outcome the workshop targets. Optional in the type because
+   * plans and generation records created before the corpus existed carry none;
+   * the request schema fills it with the default.
+   */
+  outcomeId?: string;
+};
+
+/** Why a route the classroom could not support was set aside. */
+export type RouteRejection = {
+  routeId: string;
+  routeName: string;
+  code: "NO_ELECTRICITY" | "NO_INTERNET" | "MISSING_MATERIALS";
+  reason: string;
 };
 
 export type MaterialCategory = "kırtasiye" | "elektrik" | "sunum";
@@ -93,6 +105,20 @@ export type WorkshopPlan = {
     locked: true;
   };
   profile: ResourceProfile;
+  /**
+   * Which corpus entry produced this plan, and which of its routes won. All
+   * optional so packages saved before the corpus landed still render.
+   */
+  outcomeId?: string;
+  routeId?: string;
+  routeName?: string;
+  routeTier?: "minimal" | "classroom" | "lab";
+  rejectedRoutes?: RouteRejection[];
+  /**
+   * Stamped so a generation record issued before a deploy can be recognised as
+   * predating the current generator rather than silently reused.
+   */
+  generatorVersion?: string;
   groupCount: number;
   estimatedCostTry: number;
   // Optional so packages generated before these breakdowns existed still render.
