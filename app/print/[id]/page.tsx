@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/server/auth/session";
 import { getWorkshop } from "@/server/domain/workshops";
+
+export const metadata: Metadata = {
+  // Approved packages are readable only by signed-in roles, and the print pack
+  // must never be indexed as a standalone document.
+  robots: { index: false, follow: false },
+};
+
 
 export default async function PrintPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();

@@ -15,6 +15,12 @@
       "Type": "String",
       "AllowedPattern": "migration-[a-f0-9]{7,64}"
     },
+    "SiteUrl": {
+      "Type": "String",
+      "Default": "",
+      "AllowedPattern": "(https://[a-z0-9.-]+)?",
+      "Description": "Canonical public origin for robots.txt, the sitemap and page metadata."
+    },
     "AppMode": {
       "Type": "String",
       "Default": "replay",
@@ -73,6 +79,7 @@
           },
           "Environment": [
             { "Name": "APP_MODE", "Value": { "Ref": "AppMode" } },
+            { "Name": "SITE_URL", "Value": { "Ref": "SiteUrl" } },
             { "Name": "DATABASE_CA_CERT", "Value": "/app/rds-ca.pem" },
             { "Name": "DATABASE_SSL", "Value": "true" },
             { "Name": "DB_HOST", "Value": { "Fn::ImportValue": { "Fn::Sub": "${EnvironmentName}-DatabaseEndpoint" } } },

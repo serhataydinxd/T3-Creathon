@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Clock3, LockKeyhole, ShieldCheck, Star, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -7,6 +8,13 @@ import { requireUser } from "@/server/auth/session";
 import { getFeedbackSummary, getReviews, getWorkshop } from "@/server/domain/workshops";
 import { MaterialLedger } from "@/components/material-ledger";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  // Approved packages are readable only by signed-in roles, and the print pack
+  // must never be indexed as a standalone document.
+  robots: { index: false, follow: false },
+};
+
 
 const statusLabels: Record<string, string> = {
   draft: "Taslak",

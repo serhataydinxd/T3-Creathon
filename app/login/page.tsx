@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { AuthForm } from "@/components/auth-form";
 import { loginAction } from "@/app/actions/auth";
 import { getCurrentUser } from "@/server/auth/session";
+
+export const metadata: Metadata = {
+  title: "Giriş",
+  description: "Rol tabanlı çalışma alanınıza giriş yapın.",
+  robots: { index: false, follow: true },
+};
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ registered?: string }> }) {
   if (await getCurrentUser()) redirect("/dashboard");

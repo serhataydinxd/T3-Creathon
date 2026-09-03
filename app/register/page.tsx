@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { AuthForm } from "@/components/auth-form";
 import { registerAction } from "@/app/actions/auth";
 import { getCurrentUser } from "@/server/auth/session";
+
+export const metadata: Metadata = {
+  title: "Kayıt",
+  description: "Hesap oluşturun; yönetici onayından sonra rolünüz etkinleşir.",
+  robots: { index: false, follow: true },
+};
 
 export default async function RegisterPage() {
   if (await getCurrentUser()) redirect("/dashboard");

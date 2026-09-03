@@ -1,0 +1,17 @@
+import type { MetadataRoute } from "next";
+import { PUBLIC_ROUTES, absoluteUrl } from "@/server/site";
+
+// Only the two pages a visitor can actually read without an account. Listing
+// the auth pages or the guarded workflow would advertise routes that answer
+// with a redirect.
+const PRIORITY: Record<string, number> = { "/": 1, "/about": 0.8 };
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const lastModified = new Date("2026-09-03");
+  return PUBLIC_ROUTES.map((route) => ({
+    url: absoluteUrl(route),
+    lastModified,
+    changeFrequency: "monthly" as const,
+    priority: PRIORITY[route] ?? 0.5,
+  }));
+}

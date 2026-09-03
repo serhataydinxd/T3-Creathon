@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BookOpenCheck, CheckCircle2, Clock3, FlaskConical, Star, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -5,6 +6,12 @@ import { requireUser } from "@/server/auth/session";
 import { listFeedbackRollup, listWorkshops } from "@/server/domain/workshops";
 import { listPendingUsers } from "@/server/domain/users";
 import { activateUserAction } from "@/app/actions/manager";
+
+export const metadata: Metadata = {
+  title: 'Genel bakış',
+  // Behind the role guard: a crawler only ever sees a redirect to the login page.
+  robots: { index: false, follow: false },
+};
 
 const statusLabels: Record<string, string> = {
   draft: "Taslak",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock3, LockKeyhole, Sparkles, TriangleAlert } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "@/server/site";
 
 const recent = [
   { title: "Elektrik Devreleri · Kısıtlı kaynak", meta: "7. sınıf · 5E · 40 dk", status: "İncelemeye hazır", kind: "ready" },
@@ -8,9 +9,60 @@ const recent = [
   { title: "Elektrik Devreleri · Çevrimdışı", meta: "7. sınıf · 5E · 40 dk", status: "2 uyarı", kind: "warning" },
 ];
 
+// Structured data so search engines can render the project as a named
+// application rather than an untitled page. Inline JSON-LD is permitted by the
+// site's script-src policy.
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": absoluteUrl("/#website"),
+      name: SITE_NAME,
+      url: absoluteUrl("/"),
+      description: SITE_DESCRIPTION,
+      inLanguage: "tr-TR",
+      publisher: { "@id": absoluteUrl("/#team") },
+    },
+    {
+      "@type": "Organization",
+      "@id": absoluteUrl("/#team"),
+      name: "Node42",
+      url: "https://github.com/serhataydinxd/T3-Creathon",
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: SITE_NAME,
+      applicationCategory: "EducationalApplication",
+      operatingSystem: "Web",
+      url: absoluteUrl("/"),
+      description: SITE_DESCRIPTION,
+      inLanguage: "tr-TR",
+      audience: {
+        "@type": "EducationalAudience",
+        educationalRole: "teacher",
+      },
+      featureList: [
+        "Kazanım kilidi ile değiştirilemez öğrenme hedefi",
+        "Süre, bütçe, elektrik, internet ve malzemeye göre uyarlama",
+        "Grup başına ve sınıf toplamı malzeme listesi ve maliyet",
+        "Zorunlu pedagojik inceleme ve onay akışı",
+        "Yazdırılabilir eğitimci paketi",
+      ],
+      isAccessibleForFree: true,
+      author: { "@id": absoluteUrl("/#team") },
+    },
+  ],
+};
+
 export default function Home() {
   return (
     <AppShell>
+      <script
+        type="application/ld+json"
+        // The payload is built from local constants, never from user input.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <section className="page dashboard-page">
         <div className="hero-grid">
           <div>

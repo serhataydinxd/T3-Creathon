@@ -1,0 +1,11 @@
+# İMKÂN — güvenlik iletişim bilgisi / security contact
+# https://www.rfc-editor.org/rfc/rfc9116
+
+Contact: mailto:node42.team@gmail.com
+Expires: 2027-09-03T00:00:00.000Z
+Preferred-Languages: tr, en
+Canonical: https://d1a8sno49hnlhc.cloudfront.net/.well-known/security.txt
+Policy: https://github.com/serhataydinxd/T3-Creathon/blob/main/SECURITY.md
+
+# Lütfen güvenlik açıklarını herkese açık issue olarak paylaşmayın.
+# Please do not report vulnerabilities in a public issue.

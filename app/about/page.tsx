@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { AppShell } from "@/components/app-shell";
+
+export const metadata: Metadata = {
+  title: "Proje hakkında",
+  description: "İMKÂN'ın kapsamı, pedagojik güvenceleri ve yapay zekânın nerede devreye girdiği.",
+  alternates: { canonical: "/about" },
+};
 
 export default function AboutPage() {
   return (
