@@ -1,0 +1,109 @@
+{
+  "outcomes": [
+    {
+      "code": "FB.7.1.2",
+      "canonicalText": "Uzay gözlem araçları ile ilgili bilimsel model oluşturabilme",
+      "gradeLevel": 7,
+      "unit": "Uzay Çağı",
+      "unitOrder": 1,
+      "source": {
+        "document": "Fen Bilimleri Dersi Öğretim Programı (3-8), Türkiye Yüzyılı Maarif Modeli (2026)",
+        "url": "https://tymm.meb.gov.tr/fen-bilimleri-dersi/unite/416",
+        "accessedOn": "2026-09-03",
+        "reference": "7. Sınıf > 1. Ünite > Öğrenme Çıktıları ve Süreç Bileşenleri > FB.7.1.2"
+      },
+      "verification": "unverified",
+      "notes": "Resmî TYMM ünite sayfasından aktarıldı; insan alan uzmanı onayı bekliyor."
+    },
+    {
+      "code": "FB.7.2.2",
+      "canonicalText": "Enerji çeşitlerinden kinetik ve potansiyel enerjiyi karşılaştırabilme",
+      "gradeLevel": 7,
+      "unit": "Kuvvet Ve Enerjiyi Keşfedelim",
+      "unitOrder": 2,
+      "source": {
+        "document": "Fen Bilimleri Dersi Öğretim Programı (3-8), Türkiye Yüzyılı Maarif Modeli (2026)",
+        "url": "https://tymm.meb.gov.tr/fen-bilimleri-dersi/unite/429",
+        "accessedOn": "2026-09-03",
+        "reference": "7. Sınıf > 2. Ünite > Öğrenme Çıktıları ve Süreç Bileşenleri > FB.7.2.2"
+      },
+      "verification": "unverified",
+      "notes": "Resmî TYMM ünite sayfasından aktarıldı; insan alan uzmanı onayı bekliyor."
+    },
+    {
+      "code": "FB.7.3.1",
+      "canonicalText": "Sindirim sistemini oluşturan yapı ve organların görevlerini model üzerinde gözlemleyebilme",
+      "gradeLevel": 7,
+      "unit": "Vücudumuzdaki Sistemler",
+      "unitOrder": 3,
+      "source": {
+        "document": "Fen Bilimleri Dersi Öğretim Programı (3-8), Türkiye Yüzyılı Maarif Modeli (2026)",
+        "url": "https://tymm.meb.gov.tr/fen-bilimleri-dersi/unite/430",
+        "accessedOn": "2026-09-03",
+        "reference": "7. Sınıf > 3. Ünite > Öğrenme Çıktıları ve Süreç Bileşenleri > FB.7.3.1"
+      },
+      "verification": "unverified",
+      "notes": "Resmî TYMM ünite sayfasından aktarıldı; insan alan uzmanı onayı bekliyor."
+    },
+    {
+      "code": "FB.7.4.1",
+      "canonicalText": "Ortam değiştiren ışığın izlediği yolu gözlemleyerek kırılma olayına yönelik bilimsel çıkarım yapabilme",
+      "gradeLevel": 7,
+      "unit": "Işığın Kırılması Ve Mercekler",
+      "unitOrder": 4,
+      "source": {
+        "document": "Fen Bilimleri Dersi Öğretim Programı (3-8), Türkiye Yüzyılı Maarif Modeli (2026)",
+        "url": "https://tymm.meb.gov.tr/fen-bilimleri-dersi/unite/431",
+        "accessedOn": "2026-09-03",
+        "reference": "7. Sınıf > 4. Ünite > Öğrenme Çıktıları ve Süreç Bileşenleri > FB.7.4.1"
+      },
+      "verification": "unverified",
+      "notes": "Resmî TYMM ünite sayfasından aktarıldı; insan alan uzmanı onayı bekliyor."
+    },
+    {
+      "code": "FB.7.5.3",
+      "canonicalText": "Farklı moleküllere ait bilimsel model oluşturabilme",
+      "gradeLevel": 7,
+      "unit": "Maddenin Doğasına Yolculuk",
+      "unitOrder": 5,
+      "source": {
+        "document": "Fen Bilimleri Dersi Öğretim Programı (3-8), Türkiye Yüzyılı Maarif Modeli (2026)",
+        "url": "https://tymm.meb.gov.tr/fen-bilimleri-dersi/unite/432",
+        "accessedOn": "2026-09-03",
+        "reference": "7. Sınıf > 5. Ünite > Öğrenme Çıktıları ve Süreç Bileşenleri > FB.7.5.3"
+      },
+      "verification": "unverified",
+      "notes": "Resmî TYMM ünite sayfasından aktarıldı; insan alan uzmanı onayı bekliyor."
+    },
+    {
+      "code": "FB.7.6.2",
+      "canonicalText": "Elektriklenme çeşitlerini belirlemeye yönelik deney yapabilme",
+      "gradeLevel": 7,
+      "unit": "Elektriklenme",
+      "unitOrder": 6,
+      "source": {
+        "document": "Fen Bilimleri Dersi Öğretim Programı (3-8), Türkiye Yüzyılı Maarif Modeli (2026)",
+        "url": "https://tymm.meb.gov.tr/fen-bilimleri-dersi/unite/433",
+        "accessedOn": "2026-09-03",
+        "reference": "7. Sınıf > 6. Ünite > Öğrenme Çıktıları ve Süreç Bileşenleri > FB.7.6.2"
+      },
+      "verification": "unverified",
+      "notes": "Resmî sayfadaki ayrıştırılmış Unicode Türkçe karakterleri NFC olarak saklandı; sözcükler değiştirilmedi. İnsan alan uzmanı onayı bekliyor."
+    },
+    {
+      "code": "FB.7.7.1",
+      "canonicalText": "Besin zincirindeki canlılar arasındaki ilişkileri yapılandırabilme",
+      "gradeLevel": 7,
+      "unit": "Sürdürülebilir Yaşam Ve Enerji",
+      "unitOrder": 7,
+      "source": {
+        "document": "Fen Bilimleri Dersi Öğretim Programı (3-8), Türkiye Yüzyılı Maarif Modeli (2026)",
+        "url": "https://tymm.meb.gov.tr/fen-bilimleri-dersi/unite/434",
+        "accessedOn": "2026-09-03",
+        "reference": "7. Sınıf > 7. Ünite > Öğrenme Çıktıları ve Süreç Bileşenleri > FB.7.7.1"
+      },
+      "verification": "unverified",
+      "notes": "Resmî sayfadaki ayrıştırılmış Unicode Türkçe karakterleri NFC olarak saklandı; sözcükler değiştirilmedi. İnsan alan uzmanı onayı bekliyor."
+    }
+  ]
+}
