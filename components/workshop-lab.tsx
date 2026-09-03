@@ -172,6 +172,27 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
             <section className="panel">
               <div className="panel-kicker"><PackageCheck size={17} /> 03 · Mevcut malzemeler</div>
               <p className="panel-help">Sınıfta gerçekten bulunanları seçin. Sistem yalnızca bunları veya onaylı alternatiflerini kullanır.</p>
+              <div className="preset-row">
+                {INVENTORY_PRESET_IDS.map((presetId) => {
+                  const preset = INVENTORY_PRESETS[presetId];
+                  const active =
+                    preset.materials.length === profile.materials.length &&
+                    preset.materials.every((materialId) => profile.materials.includes(materialId));
+                  return (
+                    <button
+                      key={presetId}
+                      type="button"
+                      data-testid={`preset-${presetId}`}
+                      aria-pressed={active}
+                      className={active ? "preset active" : "preset"}
+                      title={preset.description}
+                      onClick={() => update("materials", [...preset.materials])}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="material-grid">
                 {MATERIAL_OPTIONS.map((material) => (
                   <button key={material.key} data-testid={`material-${material.key}`} aria-pressed={profile.materials.includes(material.key)} type="button" className={profile.materials.includes(material.key) ? "material selected" : "material"} onClick={() => toggleMaterial(material.key)}>
