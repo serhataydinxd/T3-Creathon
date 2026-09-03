@@ -37,3 +37,6 @@ docs/*.pptx
 docs/*.pdf
 docs/Screenshot*
 docs/fill.py
+
+# Agent worktrees, created locally by background agents
+.claude/worktrees/
