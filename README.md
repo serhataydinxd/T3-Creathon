@@ -147,23 +147,23 @@ onay bekler; rol ve oturum almaz.
 
 ```bash
 cp .env.example .env
-# .env içindeki LLM_API_KEY değerine Google AI Studio anahtarını girin
+# .env içindeki LLM_API_KEY değerine OpenAI proje API anahtarını girin
 APP_MODE=live npm run dev
 ```
 
 `APP_MODE` `live` değilse veya anahtar yoksa sistem deterministik modda kalır.
-Gemini ücretsiz katmanını denemek için varsayılan sağlayıcı ayarları şunlardır:
+Ekonomik canlı testler için varsayılan sağlayıcı ayarları şunlardır:
 
 ```dotenv
-LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-LLM_MODEL=gemini-3.7-flash
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-5.6-luna
 LLM_API_KEY=anahtarınızı-buraya-yazın
 ```
 
 GitHub staging ortamında anahtar `LLM_API_KEY` adlı environment secret; URL ve
 model ise `LLM_BASE_URL` ve `LLM_MODEL` adlı environment variable olarak
-tutulur. Aynı Google Cloud projesindeki birden fazla anahtar aynı kotayı
-paylaşır; anahtar rotasyonu kota artırmaz.
+tutulur. Sunumda yalnızca `LLM_MODEL` değişkeni `gpt-5.6-terra` yapılarak daha
+güçlü modele geçilebilir.
 
 ### Doğrulama
 

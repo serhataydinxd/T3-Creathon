@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { z } from "zod";
+import { z } from "zod";
 
 export type ProviderUsage = { inputTokens: number; outputTokens: number };
 
@@ -76,17 +76,30 @@ export type OpenAICompatibleConfig = {
 export function readProviderConfig(
   env: Readonly<Record<string, string | undefined>>,
 ): OpenAICompatibleConfig | null {
-  const apiKey = env.LLM_API_KEY?.trim() || env.DEEPSEEK_API_KEY?.trim();
+  const genericKey = env.LLM_API_KEY?.trim();
+  const legacyKey = env.DEEPSEEK_API_KEY?.trim();
+  const apiKey = genericKey || legacyKey;
   if (!apiKey) return null;
+  const legacyDefaults = !genericKey && Boolean(legacyKey);
   return {
     apiKey,
     baseUrl: (
       env.LLM_BASE_URL?.trim() ||
       env.DEEPSEEK_BASE_URL?.trim() ||
-      "https://api.b.ai/v1"
+      (legacyDefaults ? "https://api.b.ai/v1" : "https://api.openai.com/v1")
     ).replace(/\/+$/, ""),
-    model: env.LLM_MODEL?.trim() || env.DEEPSEEK_MODEL?.trim() || "deepseek-v4-flash",
+    model:
+      env.LLM_MODEL?.trim() ||
+      env.DEEPSEEK_MODEL?.trim() ||
+      (legacyDefaults ? "deepseek-v4-flash" : "gpt-5.6-luna"),
   };
+}
+
+function isOpenAI(config: OpenAICompatibleConfig): boolean {
+  return (
+    config.baseUrl.includes("api.openai.com") ||
+    config.model.toLowerCase().startsWith("gpt-")
+  );
 }
 
 function isGemini(config: OpenAICompatibleConfig): boolean {
@@ -101,6 +114,7 @@ export function createOpenAICompatibleProvider(
   fetchImpl: typeof fetch = fetch,
 ): LLMProvider {
   const gemini = isGemini(config);
+  const openai = isOpenAI(config);
   return {
     name: `openai-compatible:${config.model}`,
     async generate({ schema, system, user, timeoutMs, maxOutputTokens }) {
@@ -119,7 +133,7 @@ export function createOpenAICompatibleProvider(
           body: JSON.stringify({
             model: config.model,
             messages: [
-              { role: "system", content: system },
+              { role: openai ? "developer" : "system", content: system },
               { role: "user", content: user },
             ],
             // The whole document is validated at once, so there is nothing to
@@ -133,14 +147,27 @@ export function createOpenAICompatibleProvider(
             // this bounded authoring request comfortably inside the edge
             // timeout while other OpenAI-compatible providers keep the
             // previously tested temperature.
-            ...(gemini
+            ...(openai
+              ? {
+                  reasoning_effort: "none",
+                  max_completion_tokens: maxOutputTokens,
+                  response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                      name: "workshop_authoring",
+                      strict: true,
+                      schema: z.toJSONSchema(schema),
+                    },
+                  },
+                }
+              : gemini
               ? {
                   extra_body: {
                     google: { thinking_config: { thinking_level: "low" } },
                   },
+                  max_tokens: maxOutputTokens,
                 }
-              : { temperature: 0.4 }),
-            max_tokens: maxOutputTokens,
+              : { temperature: 0.4, max_tokens: maxOutputTokens }),
           }),
         });
       } catch (error) {

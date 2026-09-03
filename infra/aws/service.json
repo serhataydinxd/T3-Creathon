@@ -30,13 +30,13 @@
     },
     "ProviderBaseUrl": {
       "Type": "String",
-      "Default": "https://api.b.ai/v1",
+      "Default": "https://api.openai.com/v1",
       "AllowedPattern": "https://.+",
       "Description": "OpenAI-compatible provider base URL without the chat/completions suffix."
     },
     "ProviderModel": {
       "Type": "String",
-      "Default": "deepseek-v4-flash",
+      "Default": "gpt-5.6-luna",
       "AllowedPattern": "[A-Za-z0-9._:/-]+",
       "Description": "Provider model identifier."
     },

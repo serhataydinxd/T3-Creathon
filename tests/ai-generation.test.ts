@@ -69,6 +69,14 @@ describe("live generation configuration", () => {
     });
   });
 
+  it("defaults a generic key to direct OpenAI Luna", () => {
+    expect(readProviderConfig({ LLM_API_KEY: "k" })).toEqual({
+      apiKey: "k",
+      baseUrl: "https://api.openai.com/v1",
+      model: "gpt-5.6-luna",
+    });
+  });
+
   it("keeps the legacy DeepSeek configuration working", () => {
     expect(readProviderConfig({ DEEPSEEK_API_KEY: "k" })).toEqual({
       apiKey: "k",
@@ -166,6 +174,39 @@ describe("generateWorkshopPlan never fails a demo", () => {
       extra_body: { google: { thinking_config: { thinking_level: "low" } } },
     });
     expect(request).not.toHaveProperty("temperature");
+    vi.unstubAllGlobals();
+  });
+
+  it("uses OpenAI structured output with reasoning disabled", async () => {
+    const fetchSpy = stubProvider(authoredFixture());
+    vi.stubGlobal("fetch", fetchSpy);
+    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, {
+      APP_MODE: "live",
+      LLM_API_KEY: "openai-key",
+      LLM_BASE_URL: "https://api.openai.com/v1/",
+      LLM_MODEL: "gpt-5.6-luna",
+    });
+
+    expect(plan.mode).toBe("LIVE");
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.openai.com/v1/chat/completions");
+    const request = JSON.parse(String(init.body));
+    expect(request).toMatchObject({
+      model: "gpt-5.6-luna",
+      messages: [{ role: "developer" }, { role: "user" }],
+      reasoning_effort: "none",
+      max_completion_tokens: 6000,
+      response_format: {
+        type: "json_schema",
+        json_schema: { name: "workshop_authoring", strict: true },
+      },
+    });
+    expect(request.response_format.json_schema.schema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+    });
+    expect(request).not.toHaveProperty("temperature");
+    expect(request).not.toHaveProperty("max_tokens");
     vi.unstubAllGlobals();
   });
 

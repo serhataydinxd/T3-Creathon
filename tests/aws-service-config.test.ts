@@ -164,8 +164,8 @@ describe("generation provider wiring", () => {
     expect(container.Environment.find((entry) => entry.Name === "LLM_MODEL")?.Value).toEqual({
       Ref: "ProviderModel",
     });
-    expect(service.Parameters.ProviderBaseUrl.Default).toBe("https://api.b.ai/v1");
-    expect(service.Parameters.ProviderModel.Default).toBe("deepseek-v4-flash");
+    expect(service.Parameters.ProviderBaseUrl.Default).toBe("https://api.openai.com/v1");
+    expect(service.Parameters.ProviderModel.Default).toBe("gpt-5.6-luna");
   });
 
   it("lets the execution role read only the generation secret it needs", () => {
