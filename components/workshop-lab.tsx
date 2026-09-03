@@ -33,6 +33,8 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
   const [view, setView] = useState<View>("configure");
   const [profile, setProfile] = useState<ResourceProfile>(DEFAULT_PROFILE);
   const [plan, setPlan] = useState<WorkshopPlan | null>(null);
+  // Issued by the server with the plan; the draft is saved by naming it.
+  const [generationId, setGenerationId] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -66,11 +68,14 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
         body: JSON.stringify(profile),
       });
       const [response] = await Promise.all([responsePromise, minimumDelay]);
-      const body = (await response.json()) as WorkshopPlan | { error: string };
+      const body = (await response.json()) as
+        | { generationId: string; plan: WorkshopPlan }
+        | { error: string };
       if (!response.ok || "error" in body) {
         throw new Error("error" in body ? body.error : "Atölye üretilemedi.");
       }
-      setPlan(body);
+      setPlan(body.plan);
+      setGenerationId(body.generationId);
       setIdempotencyKey(crypto.randomUUID());
       setView("result");
     } catch (error) {
@@ -80,33 +85,16 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
   }
 
   async function saveDraft() {
-    if (!plan || saving) return;
+    if (!plan || !generationId || saving) return;
     setSaving(true);
     setSaveError(null);
     try {
       const response = await fetch("/api/workshops", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({
-          ...plan.profile,
-          // Persist the prose the expert reviewed; the server re-derives
-          // everything that carries a guarantee.
-          authored:
-            plan.mode === "LIVE"
-              ? {
-                  title: plan.title,
-                  adaptationSummary: plan.adaptationSummary,
-                  stages: plan.stages.map((stage) => ({
-                    key: stage.key,
-                    title: stage.title,
-                    teacherAction: stage.teacherAction,
-                    studentAction: stage.studentAction,
-                    evidence: stage.evidence,
-                    objectiveConnection: stage.objectiveConnection,
-                  })),
-                }
-              : undefined,
-        }),
+        // Only the conditions and the id of the generation being saved. The
+        // prose lives server-side and is never sent back up.
+        body: JSON.stringify({ ...plan.profile, generationId }),
       });
       const body = (await response.json()) as { id?: string; error?: string };
       if (!response.ok || !body.id) throw new Error(body.error ?? "Taslak kaydedilemedi.");

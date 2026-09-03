@@ -24,13 +24,19 @@ export async function POST(request: Request) {
   const parsed = draftRequestSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Geçersiz atölye koşulları." }, { status: 400 });
   try {
-    const { authored, ...profile } = parsed.data;
-    const id = await createDraft(user, profile, idempotencyKey, authored);
+    const { generationId, ...profile } = parsed.data;
+    const id = await createDraft(user, profile, idempotencyKey, generationId);
     return NextResponse.json({ id }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "UNKNOWN";
     if (message === "PLAN_BLOCKED") return NextResponse.json({ error: "Bloker bulguları olan plan kaydedilemez." }, { status: 422 });
     if (message === "IDEMPOTENCY_KEY_REUSED") return NextResponse.json({ error: "Idempotency anahtarı farklı bir istekle daha önce kullanıldı." }, { status: 409 });
+    if (message === "GENERATION_RECORD_NOT_FOUND" || message === "GENERATION_RECORD_EXPIRED") {
+      return NextResponse.json({ error: "Üretim kaydı bulunamadı veya süresi doldu. Atölyeyi yeniden üretin." }, { status: 409 });
+    }
+    if (message === "GENERATION_PROFILE_MISMATCH") {
+      return NextResponse.json({ error: "Koşullar üretimden sonra değişti. Atölyeyi yeniden üretin." }, { status: 409 });
+    }
     return NextResponse.json({ error: "Taslak kaydedilemedi." }, { status: 500 });
   }
 }

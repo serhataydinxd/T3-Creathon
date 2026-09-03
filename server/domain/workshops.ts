@@ -15,8 +15,7 @@ import {
 import type { AuthUser } from "@/server/auth/session";
 import type { ResourceProfile, WorkshopPlan } from "./types";
 import { DEMO_OBJECTIVE } from "./fixtures";
-import { generateWorkshop } from "./generator";
-import { mergeAuthoredWorkshop, type AuthoredWorkshop } from "@/server/ai/authoring";
+import { loadGenerationRecord } from "@/server/ai/generation-record";
 
 export type WorkshopRecord = {
   id: string;
@@ -34,21 +33,31 @@ function hashJson(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+/**
+ * Persists a draft from a generation this server issued. The plan is read back
+ * from the generation record rather than accepted from the caller, so the
+ * recorded mode — and the CANLI ÜRETİM badge derived from it — attests to what
+ * actually produced the prose. A client can choose *which* of its own
+ * generations to save, and nothing else about it.
+ */
 export async function createDraft(
   user: AuthUser,
   profile: ResourceProfile,
   idempotencyKey: string,
-  authored?: AuthoredWorkshop,
+  generationId: string,
 ) {
   if (!(["content_expert", "pedagogue"] as AuthUser["role"][]).includes(user.role)) {
     throw new Error("FORBIDDEN");
   }
   const db = getDb();
   const requestHash = hashJson(profile);
-  // The skeleton is always recomputed here, so authored prose can change how a
-  // draft reads but never its stages, minutes, materials, cost or findings.
-  const skeleton = generateWorkshop(profile);
-  const plan = authored ? mergeAuthoredWorkshop(skeleton, authored) : skeleton;
+  // Throws when the record is unknown, owned by someone else, expired, or was
+  // generated for different classroom conditions.
+  const { plan } = await loadGenerationRecord({
+    userId: user.id,
+    recordId: generationId,
+    profile,
+  });
   if (plan.findings.some((finding) => finding.severity === "blocker")) throw new Error("PLAN_BLOCKED");
 
   return db.transaction(async (tx) => {

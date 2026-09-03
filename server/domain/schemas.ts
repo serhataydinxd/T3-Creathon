@@ -1,4 +1,3 @@
-import { authoredWorkshopSchema } from "@/server/ai/authoring";
 import { z } from "zod";
 
 export const resourceProfileSchema = z.object({
@@ -18,8 +17,12 @@ export const resourceProfileSchema = z.object({
   accessibilityNeeds: z.array(z.string().trim().max(160)).max(8),
 });
 
-// A draft may carry the prose the content expert actually reviewed. Everything
-// that carries a guarantee is still re-derived server-side from the profile.
-export const draftRequestSchema = resourceProfileSchema.extend({
-  authored: authoredWorkshopSchema.optional(),
-});
+/**
+ * A draft names the generation the server issued; it never carries prose.
+ * Strict, so a request still sending an `authored` body is refused outright
+ * rather than having it quietly dropped and the draft saved from the
+ * deterministic plan instead.
+ */
+export const draftRequestSchema = resourceProfileSchema
+  .extend({ generationId: z.string().uuid() })
+  .strict();
