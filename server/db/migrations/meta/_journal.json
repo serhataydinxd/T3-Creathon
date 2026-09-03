@@ -15,6 +15,13 @@
       "when": 1787602456496,
       "tag": "0001_cynical_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788466074868,
+      "tag": "0002_workable_miek",
+      "breakpoints": true
     }
   ]
 }

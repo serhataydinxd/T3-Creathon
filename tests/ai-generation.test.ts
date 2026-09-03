@@ -133,15 +133,29 @@ describe("authored merge keeps every deterministic guarantee", () => {
 
 describe("generateWorkshopPlan never fails a demo", () => {
   it("returns the replay plan when live generation is off", async () => {
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, {});
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, {});
     expect(plan.mode).toBe("REPLAY");
     expect(plan.findings.map((finding) => finding.code)).not.toContain("AI_FALLBACK_APPLIED");
+  });
+
+  it("attributes the model on the authored path and nothing on the fallback", async () => {
+    vi.stubGlobal("fetch", stubProvider(authoredFixture()));
+    const live = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
+    expect(live.plan.mode).toBe("LIVE");
+    expect(live.model).toBe(LIVE_ENV.LLM_MODEL);
+    vi.unstubAllGlobals();
+
+    vi.stubGlobal("fetch", stubProvider({ title: "kısa", stages: [] }));
+    const fell_back = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
+    expect(fell_back.plan.mode).toBe("REPLAY");
+    expect(fell_back.model).toBeNull();
+    vi.unstubAllGlobals();
   });
 
   it("returns the authored plan when the provider answers", async () => {
     const fetchSpy = stubProvider(authoredFixture());
     vi.stubGlobal("fetch", fetchSpy);
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
 
     expect(plan.mode).toBe("LIVE");
     expect(plan.title).toBe("Devrelerde Parlaklık Avı");
@@ -155,7 +169,7 @@ describe("generateWorkshopPlan never fails a demo", () => {
   it("uses Gemini low thinking without deprecated temperature sampling", async () => {
     const fetchSpy = stubProvider(authoredFixture());
     vi.stubGlobal("fetch", fetchSpy);
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, {
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, {
       APP_MODE: "live",
       LLM_API_KEY: "gemini-key",
       LLM_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai/",
@@ -180,7 +194,7 @@ describe("generateWorkshopPlan never fails a demo", () => {
   it("uses OpenAI structured output with reasoning disabled", async () => {
     const fetchSpy = stubProvider(authoredFixture());
     vi.stubGlobal("fetch", fetchSpy);
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, {
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, {
       APP_MODE: "live",
       LLM_API_KEY: "openai-key",
       LLM_BASE_URL: "https://api.openai.com/v1/",
@@ -212,7 +226,7 @@ describe("generateWorkshopPlan never fails a demo", () => {
 
   it("falls back to the replay plan and reports why when the contract breaks", async () => {
     vi.stubGlobal("fetch", stubProvider({ title: "kısa", stages: [] }));
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
 
     expect(plan.mode).toBe("REPLAY");
     expect(plan.findings).toContainEqual(
@@ -229,7 +243,7 @@ describe("generateWorkshopPlan never fails a demo", () => {
       new Response("nope", { status: 503 }),
     );
     vi.stubGlobal("fetch", failing);
-    const failed = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
+    const { plan: failed } = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
     expect(failed.mode).toBe("REPLAY");
     expect(failed.findings.map((finding) => finding.code)).toContain("AI_FALLBACK_APPLIED");
     // A fast 503 must not be retried in a tight loop until the deadline.
@@ -239,7 +253,7 @@ describe("generateWorkshopPlan never fails a demo", () => {
       throw new Error("socket hang up");
     });
     vi.stubGlobal("fetch", dropped);
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
     expect(plan.mode).toBe("REPLAY");
     expect(dropped).toHaveBeenCalledTimes(2);
     vi.unstubAllGlobals();
@@ -250,7 +264,7 @@ describe("generateWorkshopPlan never fails a demo", () => {
       throw abortError();
     });
     vi.stubGlobal("fetch", fetchSpy);
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
 
     expect(plan.mode).toBe("REPLAY");
     expect(plan.findings.map((finding) => finding.code)).toContain("AI_FALLBACK_APPLIED");
@@ -269,7 +283,7 @@ describe("generateWorkshopPlan never fails a demo", () => {
       return completion(authoredFixture());
     });
     vi.stubGlobal("fetch", fetchSpy);
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, LIVE_ENV);
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(plan.mode).toBe("LIVE");
@@ -280,7 +294,7 @@ describe("generateWorkshopPlan never fails a demo", () => {
   it("starts no attempt it cannot finish inside the remaining budget", async () => {
     const fetchSpy = vi.fn<FetchLike>(async () => completion(authoredFixture()));
     vi.stubGlobal("fetch", fetchSpy);
-    const plan = await generateWorkshopPlan(DEFAULT_PROFILE, { ...LIVE_ENV, AI_TIMEOUT_MS: "500" });
+    const { plan: plan } = await generateWorkshopPlan(DEFAULT_PROFILE, { ...LIVE_ENV, AI_TIMEOUT_MS: "500" });
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(plan.mode).toBe("REPLAY");

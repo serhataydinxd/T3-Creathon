@@ -94,6 +94,37 @@ export const generationRuns = pgTable(
   (table) => [uniqueIndex("runs_requester_idempotency_idx").on(table.requestedBy, table.idempotencyKey)],
 );
 
+/**
+ * A plan the server generated, held so the draft that follows can be tied back
+ * to it. The row is the only evidence that a package's prose came from the
+ * model rather than from whoever posted the request, so the LIVE badge is
+ * derived from here and never from the client.
+ *
+ * Kept in Postgres rather than in process memory because the service can run
+ * more than one ECS task: generate and save are separate requests and may land
+ * on different tasks, and a rolling deploy replaces tasks mid-flow.
+ */
+export const generationRecords = pgTable(
+  "generation_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    // Hash of the resource profile the plan was generated for, so a record
+    // cannot be replayed against a different set of classroom conditions.
+    requestHash: text("request_hash").notNull(),
+    mode: text("mode").notNull(),
+    // Null in replay mode; no provider was involved.
+    providerModel: text("provider_model"),
+    plan: jsonb("plan").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("generation_records_user_idx").on(table.userId),
+    index("generation_records_expiry_idx").on(table.expiresAt),
+  ],
+);
+
 export const generationStages = pgTable("generation_stages", {
   id: uuid("id").primaryKey().defaultRandom(),
   runId: uuid("run_id").notNull().references(() => generationRuns.id, { onDelete: "cascade" }),

@@ -52,6 +52,16 @@ export function liveGenerationEnabled(
   return env.APP_MODE?.trim().toLowerCase() === "live" && readProviderConfig(env) !== null;
 }
 
+export type GenerationOutcome = {
+  plan: WorkshopPlan;
+  /**
+   * The model that actually authored the prose, or null when the plan came from
+   * the deterministic path. Recorded alongside the plan so provenance is
+   * attributable rather than a bare LIVE flag.
+   */
+  model: string | null;
+};
+
 /**
  * Always produces a plan. The deterministic skeleton is generated first so a
  * provider failure, timeout or contract breach can never block a demo: it
@@ -60,12 +70,12 @@ export function liveGenerationEnabled(
 export async function generateWorkshopPlan(
   profile: ResourceProfile,
   env: Readonly<Record<string, string | undefined>> = process.env,
-): Promise<WorkshopPlan> {
+): Promise<GenerationOutcome> {
   const skeleton = generateWorkshop(profile);
-  if (!liveGenerationEnabled(env)) return skeleton;
+  if (!liveGenerationEnabled(env)) return { plan: skeleton, model: null };
 
   const config = readProviderConfig(env);
-  if (!config) return skeleton;
+  if (!config) return { plan: skeleton, model: null };
   const timeoutMs = Number(env.AI_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
   const provider = createOpenAICompatibleProvider(config);
   const deadline = Date.now() + timeoutMs;
@@ -79,12 +89,13 @@ export async function generateWorkshopPlan(
     const remainingMs = deadline - Date.now();
     if (remainingMs < MIN_ATTEMPT_MS) break;
     try {
-      return await authorWorkshop(
+      const plan = await authorWorkshop(
         provider,
         profile,
         skeleton,
         Math.min(MAX_ATTEMPT_MS, remainingMs),
       );
+      return { plan, model: config.model };
     } catch (error) {
       reason = error instanceof ProviderError ? error.code : "UNKNOWN";
       // Log the code only. Prompts and completions carry classroom context.
@@ -92,5 +103,8 @@ export async function generateWorkshopPlan(
       if (!RETRYABLE.has(reason)) break;
     }
   }
-  return { ...skeleton, findings: [...skeleton.findings, fallbackFinding(reason)] };
+  return {
+    plan: { ...skeleton, findings: [...skeleton.findings, fallbackFinding(reason)] },
+    model: null,
+  };
 }

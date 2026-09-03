@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateWorkshopPlan } from "@/server/ai/generate";
+import { issueGenerationRecord } from "@/server/ai/generation-record";
 import { resourceProfileSchema } from "@/server/domain/schemas";
 import { getCurrentUser } from "@/server/auth/session";
 import { isSameOrigin, readBoundedJson } from "@/server/http/request";
@@ -24,7 +25,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    return NextResponse.json(await generateWorkshopPlan(parsed.data));
+    const { plan, model } = await generateWorkshopPlan(parsed.data);
+    // The plan is held server-side and handed back only by id, so the draft
+    // that follows is provably the one this server produced.
+    const record = await issueGenerationRecord({
+      userId: user.id,
+      profile: parsed.data,
+      plan,
+      providerModel: model,
+    });
+    return NextResponse.json({ generationId: record.id, plan });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Atölye üretilemedi." },
