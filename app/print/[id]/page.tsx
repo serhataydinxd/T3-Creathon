@@ -25,12 +25,19 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
         <section className="print-materials">
           <b>Malzeme listesi · {plan.groupCount} grup</b>
           <table>
-            <thead><tr><th scope="col">Malzeme</th><th scope="col">Grup başına</th><th scope="col">Sınıf toplamı</th><th scope="col">Toplam</th></tr></thead>
+            <thead><tr><th scope="col">Malzeme</th><th scope="col">Grup başına</th><th scope="col">Sınıf toplamı</th><th scope="col">Toplam</th><th scope="col">Durum</th></tr></thead>
             <tbody>
-              {plan.materialPlan.map((line) => <tr key={line.key}><th scope="row">{line.label}</th><td>{line.quantityPerGroup}</td><td>{line.totalQuantity}</td><td>{line.totalCostTry} ₺</td></tr>)}
+              {plan.materialPlan.map((line) => <tr key={line.key}><th scope="row">{line.label}</th><td>{line.quantityPerGroup}</td><td>{line.totalQuantity}</td><td>{line.totalCostTry} ₺</td><td>{line.inInventory ? "Envanterde" : "Temin edilmeli"}</td></tr>)}
             </tbody>
-            <tfoot><tr><th scope="row">Tahmini toplam</th><td colSpan={2} /><td>{plan.estimatedCostTry} ₺</td></tr></tfoot>
+            <tfoot><tr><th scope="row">Tahmini toplam</th><td colSpan={2} /><td>{plan.estimatedCostTry} ₺</td><td /></tr></tfoot>
           </table>
+          {plan.costs && (
+            <p className="print-costs">
+              <span>Temin bedeli: <b>{plan.costs.acquisitionTry} ₺</b></span>
+              <span>Sarf bedeli: <b>{plan.costs.lessonTry} ₺</b></span>
+              <span>Fiyat tarihi: <b>{plan.costs.pricedOn}</b></span>
+            </p>
+          )}
         </section>
       )}
       {plan.stages.map((stage, index) => <article key={stage.key}><span>0{index + 1} · {stage.name} · {stage.minutes} dk</span><h2>{stage.title}</h2><p><b>Öğretmen:</b> {stage.teacherAction}</p><p><b>Öğrenci:</b> {stage.studentAction}</p><p><b>Kazanımla bağlantı:</b> {stage.objectiveConnection}</p><p><b>Kanıt:</b> {stage.evidence}</p></article>)}

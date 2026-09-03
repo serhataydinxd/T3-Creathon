@@ -1,9 +1,13 @@
 import type { WorkshopPlan } from "@/server/domain/types";
 
+const KIND_LABEL = { consumable: "Sarf", reusable: "Kalıcı" } as const;
+
 export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
   const lines = plan.materialPlan ?? [];
   if (lines.length === 0) return null;
-  const toBuy = lines.filter((line) => !line.availableByDefault && line.totalCostTry > 0);
+  // Only what the teacher said they do not have counts as a purchase.
+  const toBuy = lines.filter((line) => !line.inInventory);
+  const costs = plan.costs;
   return (
     <section className="material-ledger" data-testid="material-ledger">
       <div className="ledger-heading">
@@ -15,6 +19,7 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
           <thead>
             <tr>
               <th scope="col">Malzeme</th>
+              <th scope="col">Tür</th>
               <th scope="col">Birim</th>
               <th scope="col">Grup başına</th>
               <th scope="col">Sınıf toplamı</th>
@@ -25,16 +30,17 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
           </thead>
           <tbody>
             {lines.map((line) => (
-              <tr data-testid={`material-line-${line.key}`} key={line.key}>
+              <tr data-testid={`material-line-${line.key}`} data-in-inventory={line.inInventory} key={line.key}>
                 <th scope="row">{line.label}</th>
+                <td className="ledger-basis">{KIND_LABEL[line.kind]}</td>
                 <td className="ledger-basis">{line.basis === "student" ? `${line.quantityPerUnit} / öğrenci` : `${line.quantityPerUnit} / grup`}</td>
                 <td>{line.quantityPerGroup}</td>
                 <td>{line.totalQuantity}</td>
                 <td>{line.unitCostTry} ₺</td>
                 <td>{line.totalCostTry} ₺</td>
                 <td>
-                  <span className={line.availableByDefault ? "supply-tag held" : "supply-tag buy"}>
-                    {line.availableByDefault ? "Sınıfta mevcut" : "Temin edilmeli"}
+                  <span className={line.inInventory ? "supply-tag held" : "supply-tag buy"}>
+                    {line.inInventory ? "Envanterinizde" : "Temin edilmeli"}
                   </span>
                 </td>
               </tr>
@@ -43,18 +49,37 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
           <tfoot>
             <tr>
               <th scope="row">Tahmini toplam</th>
-              <td colSpan={4} />
+              <td colSpan={5} />
               <td>{plan.estimatedCostTry} ₺</td>
               <td>{toBuy.length === 0 ? "Envanterden karşılanıyor" : `${toBuy.length} kalem alınacak`}</td>
             </tr>
           </tfoot>
         </table>
       </div>
+      {costs && (
+        <dl className="ledger-costs">
+          <div>
+            <dt>Temin bedeli</dt>
+            <dd data-testid="cost-acquisition">{costs.acquisitionTry} ₺</dd>
+            <small>Envanterinizde olmayan kalemler</small>
+          </div>
+          <div>
+            <dt>Sarf bedeli</dt>
+            <dd data-testid="cost-lesson">{costs.lessonTry} ₺</dd>
+            <small>Her uygulamada tükenen kalemler</small>
+          </div>
+          <div>
+            <dt>Fiyat tarihi</dt>
+            <dd>{costs.pricedOn}</dd>
+            <small>Türkiye perakende tahmini</small>
+          </div>
+        </dl>
+      )}
       <p className="ledger-note">
         Miktarlar {plan.groupCount} grup ve {plan.profile.groupSize} kişilik grup büyüklüğü için hesaplandı.
         {toBuy.length === 0
-          ? " Listedeki her malzeme varsayılan sınıf envanterinde bulunuyor; tutar yalnızca sarf maliyetidir."
-          : ` Temin edilmesi gereken kalemler: ${toBuy.map((line) => line.label).join(", ")}.`}
+          ? " İşaretlediğiniz malzemeler listenin tamamını karşılıyor."
+          : ` Envanterinizde bulunmayan kalemler: ${toBuy.map((line) => line.label).join(", ")}.`}
       </p>
     </section>
   );

@@ -95,7 +95,56 @@ describe("İMKÂN replay generator", () => {
 
   it("keeps the offline route inside the default classroom inventory", () => {
     const lines = generateWorkshop(DEFAULT_PROFILE).materialPlan ?? [];
-    expect(lines.every((line) => line.availableByDefault)).toBe(true);
+    expect(lines.every((line) => line.inInventory)).toBe(true);
+    expect(generateWorkshop(DEFAULT_PROFILE).costs?.acquisitionTry).toBe(0);
+  });
+
+  it("reports availability from the teacher's inventory, not a static flag", () => {
+    // The regression this replaces: scissors and tape are commonly stocked, so
+    // a per-material flag claimed the classroom had them even when the teacher
+    // had said otherwise, and billed tape that then needed no purchase.
+    const plan = generateWorkshop({ ...DEFAULT_PROFILE, materials: ["paper", "pencil"] });
+    const byKey = Object.fromEntries((plan.materialPlan ?? []).map((line) => [line.key, line]));
+
+    expect(byKey.paper.inInventory).toBe(true);
+    expect(byKey.pencil.inInventory).toBe(true);
+    expect(byKey.scissors.inInventory).toBe(false);
+    expect(byKey.tape.inInventory).toBe(false);
+
+    // Only the missing materials cost money to obtain.
+    expect(byKey.paper.acquisitionCostTry).toBe(0);
+    expect(byKey.tape.acquisitionCostTry).toBe(1.5);
+    expect(plan.costs?.acquisitionTry).toBe(2);
+  });
+
+  it("separates what is consumed from what is merely used", () => {
+    const plan = generateWorkshop(DEFAULT_PROFILE);
+    const byKey = Object.fromEntries((plan.materialPlan ?? []).map((line) => [line.key, line]));
+
+    expect(byKey.paper.kind).toBe("consumable");
+    expect(byKey.scissors.kind).toBe("reusable");
+    // Scissors are needed but survive the lesson, so they cost nothing to run.
+    expect(byKey.scissors.lessonCostTry).toBe(0);
+    // Paper 12 TRY plus tape 1.5 TRY, rounded up.
+    expect(plan.costs?.lessonTry).toBe(14);
+  });
+
+  it("leaves the published budget figures untouched", () => {
+    // These two numbers appear in the submitted deck and video narration, so
+    // the guard deliberately still checks the full estimate.
+    expect(generateWorkshop(DEFAULT_PROFILE).estimatedCostTry).toBe(14);
+    const kitted = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      hasElectricity: true,
+      materials: [...DEFAULT_PROFILE.materials, "battery", "led", "copper-wire"],
+      budgetTry: 500,
+    });
+    expect(kitted.estimatedCostTry).toBe(186);
+    expect(kitted.costs?.totalTry).toBe(186);
+  });
+
+  it("dates every price so a stale estimate is visible", () => {
+    expect(generateWorkshop(DEFAULT_PROFILE).costs?.pricedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("lists the circuit kit and flags what must be procured", () => {
@@ -118,13 +167,12 @@ describe("İMKÂN replay generator", () => {
       quantityPerGroup: 2,
       totalQuantity: 12,
       totalCostTry: 60,
-      availableByDefault: false,
+      kind: "reusable",
     });
-    expect(lines.filter((line) => !line.availableByDefault).map((line) => line.key)).toEqual([
-      "battery",
-      "led",
-      "copper-wire",
-    ]);
+    // The teacher selected the kit, so nothing needs buying: availability now
+    // follows the submitted inventory rather than how common a material is.
+    expect(lines.every((line) => line.inInventory)).toBe(true);
+    expect(plan.costs?.acquisitionTry).toBe(0);
     expect(plan.estimatedCostTry).toBe(186);
   });
 

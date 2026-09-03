@@ -20,9 +20,16 @@ export type ResourceProfile = {
   accessibilityNeeds: string[];
 };
 
+export type MaterialCategory = "kırtasiye" | "elektrik" | "sunum";
+
+/** A consumable is used up by the lesson; a reusable survives it. */
+export type MaterialKind = "consumable" | "reusable";
+
 export type MaterialLine = {
   key: MaterialKey;
   label: string;
+  category: MaterialCategory;
+  kind: MaterialKind;
   // "student" lines are costed per learner, so quantityPerGroup already
   // multiplies the per-learner amount by the group size.
   basis: "group" | "student";
@@ -31,7 +38,28 @@ export type MaterialLine = {
   totalQuantity: number;
   unitCostTry: number;
   totalCostTry: number;
-  availableByDefault: boolean;
+  /**
+   * Whether the teacher actually marked this material as available. Derived
+   * from the submitted resource profile, never from a static per-material
+   * flag: a material being common in Turkish classrooms says nothing about
+   * whether *this* classroom has it.
+   */
+  inInventory: boolean;
+  /** Money that must be spent, because the material is not in the inventory. */
+  acquisitionCostTry: number;
+  /** Money consumed by running the lesson once, for consumables only. */
+  lessonCostTry: number;
+};
+
+export type PlanCosts = {
+  /** Unchanged total the budget guard checks: unit cost times quantity. */
+  totalTry: number;
+  /** Subset of the total that has to be purchased. */
+  acquisitionTry: number;
+  /** Subset of the total consumed per delivery. */
+  lessonTry: number;
+  /** Turkish prices move; a figure without a date is not verifiable. */
+  pricedOn: string;
 };
 
 export type Finding = {
@@ -67,6 +95,8 @@ export type WorkshopPlan = {
   profile: ResourceProfile;
   groupCount: number;
   estimatedCostTry: number;
+  // Optional so packages generated before these breakdowns existed still render.
+  costs?: PlanCosts;
   // Optional so packages generated before the shopping list existed still render.
   materialPlan?: MaterialLine[];
   adaptationSummary: string;

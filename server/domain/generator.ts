@@ -1,4 +1,4 @@
-import { DEMO_OBJECTIVE, MATERIALS } from "./fixtures";
+import { DEMO_OBJECTIVE, MATERIALS, MATERIALS_PRICED_ON } from "./fixtures";
 import type { Finding, MaterialKey, MaterialLine, ResourceProfile, Stage, WorkshopPlan } from "./types";
 
 const STAGE_DISTRIBUTION = [0.12, 0.28, 0.2, 0.25, 0.15] as const;
@@ -150,12 +150,18 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
         ];
 
   const round = (value: number) => Math.round(value * 100) / 100;
+  const inventory = new Set(profile.materials);
   const materialPlan: MaterialLine[] = requirements.map(({ key, basis, quantity }) => {
     const material = MATERIALS[key];
     const perGroup = basis === "student" ? quantity * profile.groupSize : quantity;
+    // What the teacher told us they have, not what a typical classroom stocks.
+    const inInventory = inventory.has(key);
+    const totalCostTry = round(material.unitCostTry * perGroup * groupCount);
     return {
       key,
       label: material.label,
+      category: material.category,
+      kind: material.kind,
       basis,
       quantityPerUnit: quantity,
       quantityPerGroup: round(perGroup),
@@ -163,13 +169,26 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
       // total is rounded rather than truncated away to nothing.
       totalQuantity: round(perGroup * groupCount),
       unitCostTry: material.unitCostTry,
-      totalCostTry: round(material.unitCostTry * perGroup * groupCount),
-      availableByDefault: material.availableByDefault,
+      totalCostTry,
+      inInventory,
+      // Two different questions, so the figures deliberately overlap: a
+      // consumable the teacher does not own is both bought and used up.
+      acquisitionCostTry: inInventory ? 0 : totalCostTry,
+      lessonCostTry: material.kind === "consumable" ? totalCostTry : 0,
     };
   });
+  // Unchanged on purpose: the budget guard still checks the full estimate, so
+  // the figures already published in the demo materials stay exactly as they
+  // were. Switching the guard to acquisition only is a one-line change here.
   const estimatedCostTry = Math.ceil(
     materialPlan.reduce((sum, line) => sum + line.totalCostTry, 0),
   );
+  const costs = {
+    totalTry: estimatedCostTry,
+    acquisitionTry: Math.ceil(materialPlan.reduce((sum, line) => sum + line.acquisitionCostTry, 0)),
+    lessonTry: Math.ceil(materialPlan.reduce((sum, line) => sum + line.lessonCostTry, 0)),
+    pricedOn: MATERIALS_PRICED_ON,
+  };
 
   if (!profile.hasInternet) {
     findings.push({
@@ -209,6 +228,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     groupCount,
     estimatedCostTry,
     materialPlan,
+    costs,
     adaptationSummary: usePhysicalCircuit
       ? "Mevcut devre setleriyle güvenli, fiziksel kurulum temelli akış seçildi."
       : "Devre seti ve enerji gerektirmeyen kâğıt tabanlı model; aynı şema kazanımını koruyacak biçimde seçildi.",
