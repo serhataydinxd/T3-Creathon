@@ -18,7 +18,9 @@ import {
   Sparkles,
   Users,
   WalletCards,
+  Wifi,
   WifiOff,
+  Zap,
   ZapOff,
 } from "lucide-react";
 import { MaterialLedger } from "@/components/material-ledger";
@@ -178,8 +180,8 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
               </div>
               {profileBlocked && <div className="field-error" role="alert"><CircleAlert /> {profileFindings.map((finding) => finding.message).join(" ")}</div>}
               <div className="toggle-row">
-                <button data-testid="toggle-electricity" aria-label="Elektrik kullanımı" aria-pressed={profile.hasElectricity} className={!profile.hasElectricity ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasElectricity", !profile.hasElectricity)} type="button"><ZapOff /><span><strong>Elektrik</strong><small>{profile.hasElectricity ? "Var" : "Yok"}</small></span><i>{!profile.hasElectricity && <Check />}</i></button>
-                <button data-testid="toggle-internet" aria-label="İnternet kullanımı" aria-pressed={profile.hasInternet} className={!profile.hasInternet ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasInternet", !profile.hasInternet)} type="button"><WifiOff /><span><strong>İnternet</strong><small>{profile.hasInternet ? "Var" : "Yok"}</small></span><i>{!profile.hasInternet && <Check />}</i></button>
+                <button data-testid="toggle-electricity" aria-label="Elektrik var" aria-pressed={profile.hasElectricity} className={profile.hasElectricity ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasElectricity", !profile.hasElectricity)} type="button">{profile.hasElectricity ? <Zap /> : <ZapOff />}<span><strong>Elektrik</strong><small>{profile.hasElectricity ? "Var" : "Yok"}</small></span><i>{profile.hasElectricity && <Check />}</i></button>
+                <button data-testid="toggle-internet" aria-label="İnternet var" aria-pressed={profile.hasInternet} className={profile.hasInternet ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasInternet", !profile.hasInternet)} type="button">{profile.hasInternet ? <Wifi /> : <WifiOff />}<span><strong>İnternet</strong><small>{profile.hasInternet ? "Var" : "Yok"}</small></span><i>{profile.hasInternet && <Check />}</i></button>
               </div>
               <span className="field-label">Mekân donanımı</span>
               <div className="preset-row">

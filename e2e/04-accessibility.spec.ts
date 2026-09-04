@@ -41,7 +41,7 @@ test("the workshop lab has no serious accessibility violations", async ({ page }
  *
  * Re-enable this test once those are addressed.
  */
-test.fixme("a generated plan has no serious accessibility violations", async ({ page }) => {
+test("a generated plan has no serious accessibility violations", async ({ page }) => {
   await login(page, "content@imkan.test");
   await page.goto("/lab");
   await page.getByTestId("generate-submit").click();
@@ -56,7 +56,7 @@ test.fixme("a generated plan has no serious accessibility violations", async ({ 
  * stage cards, so it inherits the same three violations listed above. Fixing
  * them there fixes this too.
  */
-test.fixme("the package page and print pack have no serious accessibility violations", async ({ page }) => {
+test("the package page and print pack have no serious accessibility violations", async ({ page }) => {
   const path = await publishWorkshop(page);
 
   const packageResults = await new AxeBuilder({ page }).analyze();
@@ -104,7 +104,7 @@ test("material toggles agree between their visual and announced state", async ({
  * missing") and making the class, the checkmark and aria-pressed all follow it.
  * Compare the material buttons above, which get this right.
  */
-test.fixme("power and connectivity toggles agree between visual and announced state", async ({ page }) => {
+test("power and connectivity toggles agree between visual and announced state", async ({ page }) => {
   await login(page, "content@imkan.test");
   await page.goto("/lab");
 

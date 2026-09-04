@@ -18,7 +18,12 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
           {costs ? ` · ${costs.acquisitionTry} ₺ temin · ${costs.lessonTry} ₺ sarf` : ` · ${plan.estimatedCostTry} ₺ tahmini`}
         </span>
       </div>
-      <div className="ledger-scroll">
+      <div
+        className="ledger-scroll"
+        tabIndex={0}
+        role="group"
+        aria-label="Malzeme listesi tablosu, yatay kaydırılabilir"
+      >
         <table>
           <thead>
             <tr>
@@ -68,18 +73,21 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
         <dl className="ledger-costs">
           <div>
             <dt>Temin bedeli</dt>
-            <dd data-testid="cost-acquisition">{costs.acquisitionTry} ₺</dd>
-            <small>Envanterinizde olmayan kalemler</small>
+            <dd data-testid="cost-acquisition">
+              {costs.acquisitionTry} ₺<small>Envanterinizde olmayan kalemler</small>
+            </dd>
           </div>
           <div>
             <dt>Sarf bedeli</dt>
-            <dd data-testid="cost-lesson">{costs.lessonTry} ₺</dd>
-            <small>Her uygulamada tükenen kalemler</small>
+            <dd data-testid="cost-lesson">
+              {costs.lessonTry} ₺<small>Her uygulamada tükenen kalemler</small>
+            </dd>
           </div>
           <div>
             <dt>Fiyat tarihi</dt>
-            <dd>{costs.pricedOn}</dd>
-            <small>Türkiye perakende tahmini</small>
+            <dd>
+              {costs.pricedOn}<small>Türkiye perakende tahmini</small>
+            </dd>
           </div>
         </dl>
       )}
