@@ -29,10 +29,14 @@ import { INVENTORY_PRESETS, INVENTORY_PRESET_IDS, MATERIAL_OPTIONS } from "@/ser
 import { CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
 import { AGE_COHORTS, WORKSHOP_DOMAINS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
 import {
+  CENTRES,
+  CENTRE_IDS,
+  SCHOOL_CLASSROOM,
   VENUE_CAPABILITIES,
   VENUE_CAPABILITY_IDS,
-  VENUE_PRESETS,
-  VENUE_PRESET_IDS,
+  confirmedCapabilities,
+  unpublishedCapabilities,
+  type CentreId,
 } from "@/server/content/venues";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
@@ -50,6 +54,7 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
   const [saving, setSaving] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [activeStage, setActiveStage] = useState(0);
+  const [venueId, setVenueId] = useState<string>("school");
   const selectedOutcome = CURRICULUM[(profile.outcomeId ?? OUTCOME_IDS[0]) as keyof typeof CURRICULUM];
   const profileFindings = validateProfile(profile);
   const profileBlocked = profileFindings.some((finding) => finding.severity === "blocker");
@@ -156,14 +161,14 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
               </div>
               {selectedOutcome.curriculumMapping ? (
                 <p className="panel-help" data-testid="curriculum-mapping">
-                  MEB eşleştirmesi: <b>{selectedOutcome.curriculumMapping.code}</b> —{" "}
+                  Okul kazanımıyla tamamlayıcılık: <b>{selectedOutcome.curriculumMapping.code}</b> —{" "}
                   {selectedOutcome.curriculumMapping.canonicalText}
                   {selectedOutcome.curriculumMapping.verification === "unverified"
                     ? " · kaynaktan aktarıldı, uzman doğrulaması bekliyor"
                     : " · uzman tarafından doğrulandı"}
                 </p>
               ) : (
-                <p className="panel-help">Bu atölye konusunun MEB kazanım eşleştirmesi tanımlı değil.</p>
+                <p className="panel-help">Bu konu için okul kazanımı tamamlayıcılığı tanımlı değil.</p>
               )}
               <div className="inline-fields">
                 <label><span>Yaş grubu</span><select defaultValue={selectedOutcome.cohort}><option>{AGE_COHORTS[selectedOutcome.cohort].label}</option></select></label>
@@ -183,29 +188,39 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
                 <button data-testid="toggle-electricity" aria-label="Elektrik var" aria-pressed={profile.hasElectricity} className={profile.hasElectricity ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasElectricity", !profile.hasElectricity)} type="button">{profile.hasElectricity ? <Zap /> : <ZapOff />}<span><strong>Elektrik</strong><small>{profile.hasElectricity ? "Var" : "Yok"}</small></span><i>{profile.hasElectricity && <Check />}</i></button>
                 <button data-testid="toggle-internet" aria-label="İnternet var" aria-pressed={profile.hasInternet} className={profile.hasInternet ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasInternet", !profile.hasInternet)} type="button">{profile.hasInternet ? <Wifi /> : <WifiOff />}<span><strong>İnternet</strong><small>{profile.hasInternet ? "Var" : "Yok"}</small></span><i>{profile.hasInternet && <Check />}</i></button>
               </div>
-              <span className="field-label">Mekân donanımı</span>
-              <div className="preset-row">
-                {VENUE_PRESET_IDS.map((presetId) => {
-                  const preset = VENUE_PRESETS[presetId];
-                  const current = profile.capabilities ?? [];
-                  const active =
-                    preset.capabilities.length === current.length &&
-                    preset.capabilities.every((capability) => current.includes(capability));
-                  return (
-                    <button
-                      key={presetId}
-                      type="button"
-                      data-testid={`venue-${presetId}`}
-                      aria-pressed={active}
-                      className={active ? "preset active" : "preset"}
-                      title={preset.description}
-                      onClick={() => update("capabilities", [...preset.capabilities])}
-                    >
-                      {preset.label}
-                    </button>
+              <label className="field-label" htmlFor="venue-select">Uygulama yeri</label>
+              <select
+                id="venue-select"
+                data-testid="venue-select"
+                className="outcome-select"
+                value={venueId}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setVenueId(value);
+                  update(
+                    "capabilities",
+                    value === "school" ? [...SCHOOL_CLASSROOM.capabilities] : confirmedCapabilities(value as CentreId),
                   );
-                })}
-              </div>
+                }}
+              >
+                <option value="school">{SCHOOL_CLASSROOM.label}</option>
+                <optgroup label="Bilim Türkiye merkezleri">
+                  {CENTRE_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {CENTRES[id].name} · {CENTRES[id].location}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              {venueId !== "school" && unpublishedCapabilities(venueId as CentreId).length > 0 && (
+                <p className="panel-help" data-testid="unpublished-note">
+                  Bu merkez için yayımlanmamış donanım:{" "}
+                  {unpublishedCapabilities(venueId as CentreId)
+                    .map((capability) => VENUE_CAPABILITIES[capability].label)
+                    .join(", ")}
+                  . Yayımlanmamış olması yok anlamına gelmez; merkezde varsa aşağıdan işaretleyin.
+                </p>
+              )}
               <div className="material-grid">
                 {VENUE_CAPABILITY_IDS.map((capability) => {
                   const present = (profile.capabilities ?? []).includes(capability);

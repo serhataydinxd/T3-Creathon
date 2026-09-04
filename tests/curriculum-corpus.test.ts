@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { AGE_COHORT_IDS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
 import {
+  CENTRES,
+  CENTRE_IDS,
   VENUE_CAPABILITIES,
   VENUE_CAPABILITY_IDS,
-  VENUE_PRESETS,
-  VENUE_PRESET_IDS,
+  confirmedCapabilities,
+  unpublishedCapabilities,
 } from "@/server/content/venues";
 import {
   ALL_ROUTES,
@@ -150,7 +152,7 @@ describe("route selection", () => {
       hasElectricity: true,
       hasInternet: true,
       materials: [...INVENTORY_PRESETS.workshop.materials],
-      capabilities: [...VENUE_PRESETS["centre-planetarium"].capabilities],
+      capabilities: [...VENUE_CAPABILITY_IDS],
       budgetTry: 100_000,
     });
     const best = [...getOutcomeContent(outcomeId).routes].sort(
@@ -173,7 +175,6 @@ describe("route selection", () => {
       ...DEFAULT_PROFILE,
       outcomeId: "light-and-lenses",
       materials: ["paper", "pencil", "plastic-cup"],
-      capabilities: ["laboratory"],
     });
     expect(plan.routeTier).toBe("minimal");
     const rejection = (plan.rejectedRoutes ?? [])[0];
@@ -255,18 +256,20 @@ describe("topic identity and provenance", () => {
  * that are not equipped alike. This matrix asserts a plan always comes out and
  * that a route is never offered to a venue that cannot host it.
  */
-describe("topic × venue matrix", () => {
+describe("topic × centre matrix", () => {
   const cases = OUTCOME_IDS.flatMap((outcomeId) =>
-    VENUE_PRESET_IDS.map((presetId) => ({ outcomeId, presetId })),
+    CENTRE_IDS.map((centreId) => ({ outcomeId, centreId })),
   );
 
-  it.each(cases)("$outcomeId · $presetId", ({ outcomeId, presetId }) => {
+  it.each(cases)("$outcomeId · $centreId", ({ outcomeId, centreId }) => {
     const profile: ResourceProfile = {
       ...DEFAULT_PROFILE,
       outcomeId,
       hasElectricity: true,
       materials: [...INVENTORY_PRESETS.workshop.materials],
-      capabilities: [...VENUE_PRESETS[presetId].capabilities],
+      // Only what the centre's own page confirms; an unpublished facility is
+      // never assumed to exist.
+      capabilities: confirmedCapabilities(centreId),
       budgetTry: 100_000,
     };
     const plan = generateWorkshop(profile);
@@ -276,9 +279,46 @@ describe("topic × venue matrix", () => {
       (route) => route.id === plan.routeId,
     );
     expect(chosen).toBeDefined();
-    // Whatever won must be hostable here.
     for (const capability of chosen!.eligibility.requiredCapabilities ?? []) {
       expect(profile.capabilities).toContain(capability);
+    }
+  });
+});
+
+describe("centre registry", () => {
+  it("covers all thirty centres with a location", () => {
+    expect(CENTRE_IDS).toHaveLength(30);
+    for (const id of CENTRE_IDS) {
+      expect(CENTRES[id].name).toMatch(/^Bilim /);
+      expect(CENTRES[id].location.length).toBeGreaterThan(2);
+    }
+  });
+
+  it("never treats an unpublished facility as present", () => {
+    for (const id of CENTRE_IDS) {
+      const confirmed = confirmedCapabilities(id);
+      const unpublished = unpublishedCapabilities(id);
+      // The two sets partition the capability list and never overlap: not
+      // published is not evidence of absence, and must not become one.
+      expect(confirmed.length + unpublished.length).toBe(VENUE_CAPABILITY_IDS.length);
+      for (const capability of unpublished) expect(confirmed).not.toContain(capability);
+    }
+  });
+
+  it("reflects the centres whose pages name a planetarium", () => {
+    const withDome = CENTRE_IDS.filter((id) => CENTRES[id].planetarium === "available");
+    expect(withDome).toEqual(["erzurum", "gaziantep", "gungoren", "sahinbey", "trabzon"]);
+  });
+
+  it("gives a bare school classroom a workable plan for every topic", () => {
+    for (const outcomeId of OUTCOME_IDS) {
+      const plan = generateWorkshop({
+        ...DEFAULT_PROFILE,
+        outcomeId,
+        capabilities: [],
+      });
+      expect(plan.stages).toHaveLength(5);
+      expect(plan.routeTier).toBe("minimal");
     }
   });
 });
@@ -308,35 +348,28 @@ describe("venue capabilities change the plan", () => {
     expect(rejection!.reason).toContain(VENUE_CAPABILITIES.planetarium.label);
   });
 
-  it("requires the facility and the equipment together", () => {
+  it("names the equipment when that is what is missing", () => {
     // The lens bench needs a laboratory as well as the lens itself, so owning
     // one without the other is not enough.
-    const lensOnly = generateWorkshop({
-      ...DEFAULT_PROFILE,
-      outcomeId: "light-and-lenses",
-      materials: ["paper", "pencil", "plastic-cup", "convex-lens", "ruler"],
-      capabilities: [],
-      budgetTry: 100_000,
-    });
-    expect(lensOnly.routeTier).toBe("minimal");
-    expect((lensOnly.rejectedRoutes ?? [])[0].code).toBe("MISSING_CAPABILITY");
-
-    const labOnly = generateWorkshop({
+    const withoutLens = generateWorkshop({
       ...DEFAULT_PROFILE,
       outcomeId: "light-and-lenses",
       materials: ["paper", "pencil", "plastic-cup"],
-      capabilities: ["laboratory"],
+      capabilities: [],
       budgetTry: 100_000,
     });
-    expect(labOnly.routeTier).toBe("minimal");
-    expect((labOnly.rejectedRoutes ?? [])[0].code).toBe("MISSING_MATERIALS");
+    expect(withoutLens.routeTier).toBe("minimal");
+    expect((withoutLens.rejectedRoutes ?? [])[0].code).toBe("MISSING_MATERIALS");
   });
 
-  it("builds every venue preset from real capabilities", () => {
-    for (const presetId of VENUE_PRESET_IDS) {
-      for (const capability of VENUE_PRESETS[presetId].capabilities) {
-        expect(VENUE_CAPABILITY_IDS).toContain(capability);
-      }
-    }
+  it("uses the exhibition floor where a centre publishes one", () => {
+    const plan = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      outcomeId: "nature-of-matter",
+      materials: [...INVENTORY_PRESETS.workshop.materials],
+      capabilities: confirmedCapabilities("trabzon"),
+      budgetTry: 100_000,
+    });
+    expect(plan.routeId).toBe("matter-exhibition-stations");
   });
 });

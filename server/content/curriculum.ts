@@ -529,7 +529,7 @@ const LIGHT_AND_LENSES: WorkshopTopic = {
       name: "Yakınsak mercekle kırılma incelemesi",
       tier: "lab",
       adaptationSummary: "Yakınsak mercekle ışığın yol değişimi doğrudan izlenir ve odak kavramı gözlemlenir.",
-      eligibility: { requiredMaterials: ["convex-lens"], requiredCapabilities: ["laboratory"] },
+      eligibility: { requiredMaterials: ["convex-lens"] },
       materials: [
         { materialId: "paper", basis: "group", quantity: 4 },
         { materialId: "pencil", basis: "student", quantity: 1 },
@@ -624,6 +624,30 @@ const NATURE_OF_MATTER: WorkshopTopic = {
     },
   },
   routes: [
+    {
+      id: "matter-exhibition-stations",
+      name: "Sergi alanında deney düzeneği turu",
+      tier: "lab",
+      adaptationSummary:
+        "Sergi alanındaki etkileşimli düzenekler kullanılarak molekül modelleri gerçek gösterimlerle karşılaştırılır.",
+      eligibility: { requiredCapabilities: ["exhibition"] },
+      materials: [
+        { materialId: "paper", basis: "group", quantity: 3 },
+        { materialId: "pencil", basis: "student", quantity: 1 },
+      ],
+      stageOverrides: {
+        elaborate: {
+          title: "Düzenekten modele",
+          teacherAction:
+            "Sergi alanındaki madde ve molekül düzeneklerinden ikisini gösterir ve gözlem görevini dağıtır.",
+          studentAction:
+            "Düzenekte gördüğü yapıyı kendi kâğıt modeliyle karşılaştırır ve iki farkı yazar.",
+          evidence:
+            "Öğrenci, kendi modelini sergi düzeneğindeki gösterimle karşılaştırarak eksiğini belirler.",
+          materials: ["paper", "pencil"],
+        },
+      },
+    },
     {
       id: "matter-clay-models",
       name: "Hamur ve ataşla top-çubuk modeli",
