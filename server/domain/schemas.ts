@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MATERIAL_IDS } from "@/server/content/materials";
 import { DEFAULT_OUTCOME_ID, OUTCOME_IDS } from "@/server/content/curriculum";
 import { VENUE_CAPABILITY_IDS } from "@/server/content/venues";
+import { DEFAULT_FORMAT_ID, FORMAT_IDS } from "@/server/content/formats";
 
 export const resourceProfileSchema = z.object({
   durationMinutes: z.union([z.literal(40), z.literal(60), z.literal(80)]),
@@ -29,6 +30,7 @@ export const resourceProfileSchema = z.object({
     .max(VENUE_CAPABILITY_IDS.length)
     .refine((items) => new Set(items).size === items.length, "Donanım tekrarlanamaz.")
     .default([]),
+  formatId: z.enum(FORMAT_IDS).default(DEFAULT_FORMAT_ID),
 });
 
 /**

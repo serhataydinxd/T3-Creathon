@@ -6,6 +6,7 @@ import {
 } from "@/server/content/curriculum";
 import { MATERIALS, MATERIALS_PRICED_ON } from "@/server/content/materials";
 import { WORKSHOP_DOMAINS } from "@/server/content/domains";
+import { DEFAULT_FORMAT_ID, getFormat } from "@/server/content/formats";
 import { buildStages, selectRoute } from "./routes";
 import type { Finding, MaterialLine, ResourceProfile, WorkshopPlan } from "./types";
 
@@ -55,6 +56,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     throw new Error(findings.map((finding) => finding.message).join(" "));
   }
 
+  const format = getFormat(profile.formatId);
   const outcomeId = resolveOutcomeId(profile);
   const content = getOutcomeContent(outcomeId);
   const { route, rejected } = selectRoute(outcomeId, profile);
@@ -100,6 +102,24 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     pricedOn: MATERIALS_PRICED_ON,
   };
 
+  // The format's own published requirement, before the content's.
+  if (format.requiresInternet && !profile.hasInternet) {
+    findings.push({
+      code: "FORMAT_REQUIREMENT_UNMET",
+      severity: "blocker",
+      message: `${format.label} internet bağlantısı gerektirir.`,
+    });
+  }
+  if (profile.durationMinutes !== format.standardSessionMinutes) {
+    findings.push({
+      code: "NON_STANDARD_DURATION",
+      severity: "info",
+      message: `${format.label} için yayımlanmış oturum süresi ${format.standardSessionMinutes} dakikadır; bu plan ${profile.durationMinutes} dakikaya göre bölündü.`,
+    });
+  }
+  if (format.packageNote) {
+    findings.push({ code: "FORMAT_IS_A_PACKAGE", severity: "info", message: format.packageNote });
+  }
   if (!profile.hasInternet) {
     findings.push({
       code: "OFFLINE_MEDIA_UNAVAILABLE",
@@ -154,6 +174,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     outcomeId,
     domainId: content.domainId,
     cohort: content.cohort,
+    formatId: format.id,
     routeId: route.id,
     routeName: route.name,
     routeTier: route.tier,
@@ -171,7 +192,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
 }
 
 export const DEFAULT_PROFILE: ResourceProfile = {
-  durationMinutes: 40,
+  durationMinutes: 60,
   classSize: 30,
   groupSize: 5,
   budgetTry: 50,
@@ -181,4 +202,5 @@ export const DEFAULT_PROFILE: ResourceProfile = {
   materials: ["paper", "pencil", "scissors", "tape", "tissue"],
   accessibilityNeeds: ["Yüksek kontrastlı basılı materyal"],
   outcomeId: DEFAULT_OUTCOME_ID,
+  formatId: DEFAULT_FORMAT_ID,
 };

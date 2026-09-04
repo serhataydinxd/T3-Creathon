@@ -38,6 +38,7 @@ import {
   unpublishedCapabilities,
   type CentreId,
 } from "@/server/content/venues";
+import { FORMATS, FORMAT_IDS, getFormat } from "@/server/content/formats";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
 type View = "configure" | "generating" | "result";
@@ -55,6 +56,7 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [activeStage, setActiveStage] = useState(0);
   const [venueId, setVenueId] = useState<string>("school");
+  const selectedFormat = getFormat(profile.formatId);
   const selectedOutcome = CURRICULUM[(profile.outcomeId ?? OUTCOME_IDS[0]) as keyof typeof CURRICULUM];
   const profileFindings = validateProfile(profile);
   const profileBlocked = profileFindings.some((finding) => finding.severity === "blocker");
@@ -188,6 +190,24 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
                 <button data-testid="toggle-electricity" aria-label="Elektrik var" aria-pressed={profile.hasElectricity} className={profile.hasElectricity ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasElectricity", !profile.hasElectricity)} type="button">{profile.hasElectricity ? <Zap /> : <ZapOff />}<span><strong>Elektrik</strong><small>{profile.hasElectricity ? "Var" : "Yok"}</small></span><i>{profile.hasElectricity && <Check />}</i></button>
                 <button data-testid="toggle-internet" aria-label="İnternet var" aria-pressed={profile.hasInternet} className={profile.hasInternet ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasInternet", !profile.hasInternet)} type="button">{profile.hasInternet ? <Wifi /> : <WifiOff />}<span><strong>İnternet</strong><small>{profile.hasInternet ? "Var" : "Yok"}</small></span><i>{profile.hasInternet && <Check />}</i></button>
               </div>
+              <label className="field-label" htmlFor="format-select">Eğitim formatı</label>
+              <select
+                id="format-select"
+                data-testid="format-select"
+                className="outcome-select"
+                value={profile.formatId ?? FORMAT_IDS[0]}
+                onChange={(event) => update("formatId", event.target.value)}
+              >
+                {FORMAT_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {FORMATS[id].label}
+                  </option>
+                ))}
+              </select>
+              <p className="panel-help">
+                {selectedFormat.description} Yayımlanmış oturum süresi{" "}
+                {selectedFormat.standardSessionMinutes} dakikadır.
+              </p>
               <label className="field-label" htmlFor="venue-select">Uygulama yeri</label>
               <select
                 id="venue-select"

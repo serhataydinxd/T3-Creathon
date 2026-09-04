@@ -10,6 +10,7 @@ import {
 } from "@/server/content/curriculum";
 import { MATERIALS } from "@/server/content/materials";
 import { VENUE_CAPABILITIES } from "@/server/content/venues";
+import { getFormat } from "@/server/content/formats";
 import type { ResourceProfile, RouteRejection, Stage } from "./types";
 
 /**
@@ -41,6 +42,15 @@ export function evaluateEligibility(
       routeName: route.name,
       code: "NO_INTERNET",
       reason: "Sınıfta internet bulunmadığı için bu rota uygulanamaz.",
+    };
+  }
+  const format = getFormat(profile.formatId);
+  if (!format.allowsVenueCapabilities && (eligibility.requiredCapabilities ?? []).length > 0) {
+    return {
+      routeId: route.id,
+      routeName: route.name,
+      code: "NOT_IN_FORMAT",
+      reason: `${format.label} formatında merkez donanımı kullanılamaz.`,
     };
   }
   const missingCapabilities = (eligibility.requiredCapabilities ?? []).filter(

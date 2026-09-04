@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AGE_COHORT_IDS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
+import { FORMATS, FORMAT_IDS } from "@/server/content/formats";
 import {
   CENTRES,
   CENTRE_IDS,
@@ -371,5 +372,83 @@ describe("venue capabilities change the plan", () => {
       budgetTry: 100_000,
     });
     expect(plan.routeId).toBe("matter-exhibition-stations");
+  });
+});
+
+/**
+ * Formats carry their own published constraints, so a plan has to respect the
+ * format as well as the venue and the stock.
+ */
+describe("education formats", () => {
+  it("declares all four published formats with their official names", () => {
+    expect(FORMAT_IDS).toHaveLength(4);
+    expect(FORMATS["school-group"].label).toBe("Okul Gruplarına Yönelik Eğitimler");
+    // Their own spelling puts "çevrim içi" apart.
+    expect(FORMATS.online.label).toContain("Çevrim İçi");
+    for (const id of FORMAT_IDS) {
+      expect(FORMATS[id].standardSessionMinutes).toBe(60);
+    }
+  });
+
+  it("refuses a centre facility in an online session", () => {
+    // The participant is at home, so the dome cannot be part of the delivery
+    // however well equipped the centre is.
+    const plan = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      outcomeId: "space-age",
+      formatId: "online",
+      hasInternet: true,
+      capabilities: [...VENUE_CAPABILITY_IDS],
+      materials: [...INVENTORY_PRESETS.workshop.materials],
+      budgetTry: 100_000,
+    });
+    expect(plan.routeId).not.toBe("space-age-planetarium");
+    const rejection = (plan.rejectedRoutes ?? []).find((item) => item.code === "NOT_IN_FORMAT");
+    expect(rejection).toBeDefined();
+    expect(rejection!.reason).toContain("Çevrim İçi");
+  });
+
+  it("blocks an online session with no connection", () => {
+    const plan = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      formatId: "online",
+      hasInternet: false,
+    });
+    expect(plan.findings).toContainEqual(
+      expect.objectContaining({ code: "FORMAT_REQUIREMENT_UNMET", severity: "blocker" }),
+    );
+  });
+
+  it("uses the dome for the same topic in a school group session", () => {
+    const plan = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      outcomeId: "space-age",
+      formatId: "school-group",
+      capabilities: confirmedCapabilities("trabzon"),
+      materials: [...INVENTORY_PRESETS.workshop.materials],
+      budgetTry: 100_000,
+    });
+    expect(plan.routeId).toBe("space-age-planetarium");
+  });
+
+  it("says a long package is a package rather than pretending to cover it", () => {
+    const plan = generateWorkshop({ ...DEFAULT_PROFILE, formatId: "long-term" });
+    expect(plan.findings).toContainEqual(
+      expect.objectContaining({ code: "FORMAT_IS_A_PACKAGE", severity: "info" }),
+    );
+    expect(FORMATS["long-term"].plansWholeFormat).toBe(false);
+  });
+
+  it("flags a session that departs from the published length", () => {
+    const standard = generateWorkshop(DEFAULT_PROFILE);
+    expect(standard.findings.map((finding) => finding.code)).not.toContain(
+      "NON_STANDARD_DURATION",
+    );
+    const shorter = generateWorkshop({ ...DEFAULT_PROFILE, durationMinutes: 40 });
+    expect(shorter.findings).toContainEqual(
+      expect.objectContaining({ code: "NON_STANDARD_DURATION", severity: "info" }),
+    );
+    // Still a complete plan; the divergence is reported, not refused.
+    expect(shorter.stages.reduce((sum, stage) => sum + stage.minutes, 0)).toBe(40);
   });
 });

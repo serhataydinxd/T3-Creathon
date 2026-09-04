@@ -28,13 +28,15 @@ export type ResourceProfile = {
    * defaults it so generate and save always hash identically.
    */
   capabilities?: string[];
+  /** Which Bilim Türkiye education format the session is delivered under. */
+  formatId?: string;
 };
 
 /** Why a route the classroom could not support was set aside. */
 export type RouteRejection = {
   routeId: string;
   routeName: string;
-  code: "NO_ELECTRICITY" | "NO_INTERNET" | "MISSING_MATERIALS" | "MISSING_CAPABILITY";
+  code: "NO_ELECTRICITY" | "NO_INTERNET" | "MISSING_MATERIALS" | "MISSING_CAPABILITY" | "NOT_IN_FORMAT";
   reason: string;
 };
 
@@ -128,6 +130,7 @@ export type WorkshopPlan = {
   /** Bilim Türkiye workshop domain and age cohort the topic belongs to. */
   domainId?: string;
   cohort?: string;
+  formatId?: string;
   routeId?: string;
   routeName?: string;
   routeTier?: "minimal" | "classroom" | "lab";
