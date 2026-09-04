@@ -26,6 +26,12 @@ import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
 import { INVENTORY_PRESETS, INVENTORY_PRESET_IDS, MATERIAL_OPTIONS } from "@/server/content/materials";
 import { CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
 import { AGE_COHORTS, WORKSHOP_DOMAINS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
+import {
+  VENUE_CAPABILITIES,
+  VENUE_CAPABILITY_IDS,
+  VENUE_PRESETS,
+  VENUE_PRESET_IDS,
+} from "@/server/content/venues";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
 type View = "configure" | "generating" | "result";
@@ -174,6 +180,55 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
               <div className="toggle-row">
                 <button data-testid="toggle-electricity" aria-label="Elektrik kullanımı" aria-pressed={profile.hasElectricity} className={!profile.hasElectricity ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasElectricity", !profile.hasElectricity)} type="button"><ZapOff /><span><strong>Elektrik</strong><small>{profile.hasElectricity ? "Var" : "Yok"}</small></span><i>{!profile.hasElectricity && <Check />}</i></button>
                 <button data-testid="toggle-internet" aria-label="İnternet kullanımı" aria-pressed={profile.hasInternet} className={!profile.hasInternet ? "toggle-card selected" : "toggle-card"} onClick={() => update("hasInternet", !profile.hasInternet)} type="button"><WifiOff /><span><strong>İnternet</strong><small>{profile.hasInternet ? "Var" : "Yok"}</small></span><i>{!profile.hasInternet && <Check />}</i></button>
+              </div>
+              <span className="field-label">Mekân donanımı</span>
+              <div className="preset-row">
+                {VENUE_PRESET_IDS.map((presetId) => {
+                  const preset = VENUE_PRESETS[presetId];
+                  const current = profile.capabilities ?? [];
+                  const active =
+                    preset.capabilities.length === current.length &&
+                    preset.capabilities.every((capability) => current.includes(capability));
+                  return (
+                    <button
+                      key={presetId}
+                      type="button"
+                      data-testid={`venue-${presetId}`}
+                      aria-pressed={active}
+                      className={active ? "preset active" : "preset"}
+                      title={preset.description}
+                      onClick={() => update("capabilities", [...preset.capabilities])}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="material-grid">
+                {VENUE_CAPABILITY_IDS.map((capability) => {
+                  const present = (profile.capabilities ?? []).includes(capability);
+                  return (
+                    <button
+                      key={capability}
+                      type="button"
+                      data-testid={`capability-${capability}`}
+                      aria-pressed={present}
+                      title={VENUE_CAPABILITIES[capability].description}
+                      className={present ? "material selected" : "material"}
+                      onClick={() =>
+                        update(
+                          "capabilities",
+                          present
+                            ? (profile.capabilities ?? []).filter((item) => item !== capability)
+                            : [...(profile.capabilities ?? []), capability],
+                        )
+                      }
+                    >
+                      <i>{present && <Check />}</i>
+                      {VENUE_CAPABILITIES[capability].label}
+                    </button>
+                  );
+                })}
               </div>
               <div className="budget-row">
                 <label><span>Toplam bütçe</span><div className="input-affix"><input type="number" min="0" value={profile.budgetTry} onChange={(event) => update("budgetTry", Number(event.target.value))} /><b>₺</b></div></label>

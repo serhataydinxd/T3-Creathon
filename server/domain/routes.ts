@@ -9,12 +9,18 @@ import {
   type StageKey,
 } from "@/server/content/curriculum";
 import { MATERIALS } from "@/server/content/materials";
+import { VENUE_CAPABILITIES } from "@/server/content/venues";
 import type { ResourceProfile, RouteRejection, Stage } from "./types";
 
 /**
  * Why a route could not be offered, in the teacher's terms. Returned rather
  * than discarded so the interface can explain the adaptation instead of
  * presenting one plan as if it were the only possibility.
+ *
+ * Only the first failing condition is reported, and the order is deliberate:
+ * power, connectivity, then fixed venue facilities, then stock. A trainer can
+ * buy a lens before the next session but cannot build a planetarium, so the
+ * less fixable blocker is the more useful thing to say.
  */
 export function evaluateEligibility(
   route: RouteDefinition,
@@ -35,6 +41,19 @@ export function evaluateEligibility(
       routeName: route.name,
       code: "NO_INTERNET",
       reason: "Sınıfta internet bulunmadığı için bu rota uygulanamaz.",
+    };
+  }
+  const missingCapabilities = (eligibility.requiredCapabilities ?? []).filter(
+    (capability) => !(profile.capabilities ?? []).includes(capability),
+  );
+  if (missingCapabilities.length > 0) {
+    return {
+      routeId: route.id,
+      routeName: route.name,
+      code: "MISSING_CAPABILITY",
+      reason: `Mekânda gereken donanım yok: ${missingCapabilities
+        .map((capability) => VENUE_CAPABILITIES[capability].label)
+        .join(", ")}.`,
     };
   }
   const missing = (eligibility.requiredMaterials ?? []).filter(

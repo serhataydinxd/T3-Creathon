@@ -22,13 +22,19 @@ export type ResourceProfile = {
    * the request schema fills it with the default.
    */
   outcomeId?: string;
+  /**
+   * Fixed facilities the venue offers. Optional in the type because profiles
+   * captured before venues were modelled carry none; the request schema
+   * defaults it so generate and save always hash identically.
+   */
+  capabilities?: string[];
 };
 
 /** Why a route the classroom could not support was set aside. */
 export type RouteRejection = {
   routeId: string;
   routeName: string;
-  code: "NO_ELECTRICITY" | "NO_INTERNET" | "MISSING_MATERIALS";
+  code: "NO_ELECTRICITY" | "NO_INTERNET" | "MISSING_MATERIALS" | "MISSING_CAPABILITY";
   reason: string;
 };
 

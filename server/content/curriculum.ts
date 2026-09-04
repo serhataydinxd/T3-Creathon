@@ -1,5 +1,6 @@
 import type { MaterialId } from "./materials";
 import type { AgeCohortId, WorkshopDomainId } from "./domains";
+import type { VenueCapabilityId } from "./venues";
 
 export type StageKey = "engage" | "explore" | "explain" | "elaborate" | "evaluate";
 
@@ -49,6 +50,8 @@ export type RouteEligibility = {
   requiresElectricity?: boolean;
   requiresInternet?: boolean;
   requiredMaterials?: readonly MaterialId[];
+  /** Fixed venue facilities the route cannot run without. */
+  requiredCapabilities?: readonly VenueCapabilityId[];
 };
 
 /**
@@ -196,6 +199,41 @@ const SPACE_AGE: WorkshopTopic = {
     },
   },
   routes: [
+    {
+      id: "space-age-planetarium",
+      name: "Planetaryum kubbesinde gök gözlemi",
+      tier: "lab",
+      adaptationSummary:
+        "Planetaryum kubbesinde gerçek gökyüzü benzetimi izlenerek gözlem aracının ne işe yaradığı doğrudan deneyimlenir.",
+      eligibility: { requiredCapabilities: ["planetarium"] },
+      materials: [
+        { materialId: "paper", basis: "group", quantity: 2 },
+        { materialId: "pencil", basis: "student", quantity: 1 },
+      ],
+      stageOverrides: {
+        explore: {
+          title: "Kubbe altında ne kadarını görüyoruz?",
+          teacherAction:
+            "Kubbede aynı gökyüzünü çıplak göz ve teleskop görüş alanıyla sırayla gösterir; her gösterimde neye dikkat edileceğini söyler.",
+          studentAction:
+            "İki gösterim arasındaki farkı kaydeder ve gözlem aracının hangi ayrıntıyı eklediğini yazar.",
+          evidence:
+            "Öğrenci, gözlem aracının kazandırdığı ayrıntıyı kubbede gördüğü iki görüntüyü karşılaştırarak gösterir.",
+          materials: ["paper", "pencil"],
+        },
+        elaborate: {
+          title: "Gösterimi kendi modeline bağla",
+          teacherAction:
+            "Kubbede izlenen gök cisimlerinden birini seçtirir ve hangi gözlem aracıyla incelenebileceğini tartıştırır.",
+          studentAction:
+            "Seçtiği gök cismi için uygun gözlem aracını belirler ve kubbede gördüğü kanıta dayandırır.",
+          materials: ["paper", "pencil"],
+        },
+      },
+      safetyNotes: [
+        "Kubbe içinde karanlık ortam kuralları uygulanır; öğrenciler koltuklarında kalır ve gösterim sırasında salonda dolaşılmaz.",
+      ],
+    },
     {
       id: "space-age-magnifier",
       name: "Büyüteçli mercek incelemesi",
@@ -491,7 +529,7 @@ const LIGHT_AND_LENSES: WorkshopTopic = {
       name: "Yakınsak mercekle kırılma incelemesi",
       tier: "lab",
       adaptationSummary: "Yakınsak mercekle ışığın yol değişimi doğrudan izlenir ve odak kavramı gözlemlenir.",
-      eligibility: { requiredMaterials: ["convex-lens"] },
+      eligibility: { requiredMaterials: ["convex-lens"], requiredCapabilities: ["laboratory"] },
       materials: [
         { materialId: "paper", basis: "group", quantity: 4 },
         { materialId: "pencil", basis: "student", quantity: 1 },
