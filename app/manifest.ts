@@ -3,7 +3,7 @@ import { SITE_DESCRIPTION, SITE_NAME } from "@/server/site";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${SITE_NAME} — Kaynak duyarlı atölye asistanı`,
+    name: `${SITE_NAME} — Bilim Türkiye atölye içeriği asistanı`,
     short_name: SITE_NAME,
     description: SITE_DESCRIPTION,
     lang: "tr",

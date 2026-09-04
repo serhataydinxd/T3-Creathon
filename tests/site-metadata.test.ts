@@ -4,7 +4,8 @@ import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import manifest from "@/app/manifest";
 import { GET as llms } from "@/app/llms.txt/route";
-import { PRIVATE_ROUTES, absoluteUrl, resolveSiteUrl } from "@/server/site";
+import { CONTENT_UPDATED_ON, PRIVATE_ROUTES, absoluteUrl, resolveSiteUrl } from "@/server/site";
+import { GENERATOR_VERSION } from "@/server/domain/generator";
 
 describe("site origin resolution", () => {
   it("prefers an explicit SITE_URL and keeps only its origin", () => {
@@ -196,5 +197,33 @@ describe("Bilim Türkiye vocabulary", () => {
     const formats = readFileSync(new URL("../server/content/formats.ts", import.meta.url), "utf8");
     expect(formats).toContain("Çevrim İçi Atölye Eğitimleri");
     expect(formats).not.toMatch(/Çevrimiçi/);
+  });
+});
+
+/**
+ * Two dated constants that silently rot: a sitemap date crawlers stop trusting,
+ * and a generator version that disables the staleness guard when it stops
+ * moving. Neither can be checked for freshness by a test, but both can be
+ * checked for the mistakes that make them useless.
+ */
+describe("dated constants", () => {
+  it("keeps the sitemap date a real, non-future day", () => {
+    expect(CONTENT_UPDATED_ON).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const parsed = new Date(CONTENT_UPDATED_ON);
+    expect(Number.isNaN(parsed.getTime())).toBe(false);
+    // A future lastmod is ignored by crawlers, so a typo there is silent.
+    expect(parsed.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("stamps plans with a parseable generator version", () => {
+    expect(GENERATOR_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}\.\d+$/);
+    const [day] = GENERATOR_VERSION.split(".");
+    expect(new Date(day).getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("reports the sitemap date on every listed page", () => {
+    for (const entry of sitemap()) {
+      expect(entry.lastModified).toEqual(new Date(CONTENT_UPDATED_ON));
+    }
   });
 });

@@ -15,6 +15,13 @@ export const SITE_DESCRIPTION =
   "Bilim Türkiye atölye konularını, merkezin gerçek imkânlarına uyarlanmış, " +
   "pedagog onaylı ve yazdırılabilir bir oturum paketine dönüştüren yapay zekâ asistanı.";
 
+/**
+ * When the public content last changed, for the sitemap. Crawlers use it to
+ * decide whether to re-fetch, so a date that stops moving is worse than no
+ * date at all: bump it with any change to the corpus or the public pages.
+ */
+export const CONTENT_UPDATED_ON = "2026-09-04";
+
 const FALLBACK_PRODUCTION_URL = "https://d1a8sno49hnlhc.cloudfront.net";
 const FALLBACK_DEVELOPMENT_URL = "http://localhost:3000";
 

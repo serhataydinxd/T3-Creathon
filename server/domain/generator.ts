@@ -12,12 +12,17 @@ import type { Finding, MaterialLine, ResourceProfile, WorkshopPlan } from "./typ
 
 /**
  * Bumped whenever the deterministic output of this module changes in a way
- * that makes a previously generated plan stale — new or removed material
- * fields, changed cost semantics, a changed stage allocation. Generation
- * records carry it so a plan issued before a deploy is not silently saved
- * against the new rules.
+ * that makes a previously generated plan stale. Generation records carry it so
+ * a plan issued before a deploy is not silently saved against rules it was not
+ * built under.
+ *
+ * Bump this for: new or removed plan fields, changed cost semantics, a changed
+ * stage allocation, a new eligibility dimension, or a corpus change that moves
+ * which route a given profile selects. Forgetting to bump it does not fail a
+ * test — it silently disables the guard — so it belongs in the same commit as
+ * the change that made it necessary.
  */
-export const GENERATOR_VERSION = "2026-09-03.1";
+export const GENERATOR_VERSION = "2026-09-04.1";
 
 export function resolveOutcomeId(profile: ResourceProfile): OutcomeId {
   const requested = profile.outcomeId;
