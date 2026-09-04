@@ -185,8 +185,8 @@ güçlü modele geçilebilir.
 ### Doğrulama
 
 ```bash
-npm run check      # lint + 59 birim testi + üretim derlemesi
-npm run check:all  # yukarısı + 11 tarayıcı testi
+npm run check      # lint + 420 birim testi + üretim derlemesi
+npm run check:all  # yukarısı + 37 tarayıcı testi
 ```
 
 Tarayıcı testleri Docker gerektirmez: gömülü PGlite üzerinde aynı PostgreSQL

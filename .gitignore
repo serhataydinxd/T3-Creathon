@@ -34,6 +34,7 @@ T3 Vakfı Bursiyer Yapay Zeka Creathon Problemler Kitapçığı.pdf
 
 # Creathon submission working files, kept local
 docs/*.pptx
+docs/*.docx
 docs/*.pdf
 docs/Screenshot*
 docs/fill.py
