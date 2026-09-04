@@ -146,3 +146,51 @@ describe("deployment wiring for the canonical origin", () => {
     expect(policy).toContain(contact);
   });
 });
+
+/**
+ * The product is for Bilim Türkiye, so its interface should use Bilim
+ * Türkiye's words. The glossary in content/bilim-turkiye-sozluk.md is the
+ * source; these assertions keep the vocabulary from drifting back.
+ */
+describe("Bilim Türkiye vocabulary", () => {
+  const surfaces = [
+    "../components/workshop-lab.tsx",
+    "../components/material-ledger.tsx",
+    "../components/app-shell.tsx",
+    "../app/dashboard/page.tsx",
+    "../app/workshops/[id]/page.tsx",
+    "../app/print/[id]/page.tsx",
+    "../app/login/page.tsx",
+    "../app/register/page.tsx",
+  ].map((path) => ({ path, source: readFileSync(new URL(path, import.meta.url), "utf8") }));
+
+  it.each(surfaces.map(({ path }) => path))("%s calls the role an eğitmen", (path) => {
+    const { source } = surfaces.find((entry) => entry.path === path)!;
+    // "eğitimci" is our old word; theirs is "eğitmen".
+    expect(source).not.toMatch(/eğitimci/i);
+  });
+
+  it.each(surfaces.map(({ path }) => path))("%s does not call the session a ders", (path) => {
+    const { source } = surfaces.find((entry) => entry.path === path)!;
+    expect(source).not.toMatch(/\bders\b/i);
+  });
+
+  it("asks the model for their register rather than a school one", () => {
+    const prompt = readFileSync(new URL("../server/ai/authoring.ts", import.meta.url), "utf8");
+    expect(prompt).toContain("eğitmen");
+    expect(prompt).toContain('"Öğretmen" veya "ders" kelimelerini kullanma');
+  });
+
+  it("attributes the 5E scaffold to İMKÂN, not to Bilim Türkiye", () => {
+    const lab = readFileSync(new URL("../components/workshop-lab.tsx", import.meta.url), "utf8");
+    expect(lab).toContain("5E Öğrenme Döngüsü (İMKÂN)");
+    // Their published approach is named beside ours rather than replaced by it.
+    expect(lab).toContain("Yaparak Yaşayarak Öğrenme");
+  });
+
+  it("writes çevrim içi as two words, as they do", () => {
+    const formats = readFileSync(new URL("../server/content/formats.ts", import.meta.url), "utf8");
+    expect(formats).toContain("Çevrim İçi Atölye Eğitimleri");
+    expect(formats).not.toMatch(/Çevrimiçi/);
+  });
+});

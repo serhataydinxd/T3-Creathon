@@ -546,7 +546,7 @@ const LIGHT_AND_LENSES: WorkshopTopic = {
       },
       safetyNotes: [
         "Mercek hiçbir koşulda Güneş'e doğrultulmaz: güneş ışığını odaklayarak yanığa ve yangına yol açabilir.",
-        "Etkinlik yalnızca sınıf içi yapay ışık kaynağıyla ve öğretmen gözetiminde yürütülür.",
+        "Etkinlik yalnızca sınıf içi yapay ışık kaynağıyla ve eğitmen gözetiminde yürütülür.",
       ],
     },
     {

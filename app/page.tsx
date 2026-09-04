@@ -70,7 +70,7 @@ const structuredData = {
         "Süre, bütçe, elektrik, internet ve malzemeye göre uyarlama",
         "Grup başına ve sınıf toplamı malzeme listesi ve maliyet",
         "Zorunlu pedagojik inceleme ve onay akışı",
-        "Yazdırılabilir eğitimci paketi",
+        "Yazdırılabilir eğitmen paketi",
       ],
       isAccessibleForFree: true,
       author: { "@id": absoluteUrl("/#team") },

@@ -41,7 +41,8 @@ Kurallar:
 - Elektrik yoksa elektrik gerektiren hiçbir etkinlik yazma. İnternet yoksa video, simülasyon veya çevrimiçi kaynak önerme.
 - Öğrenci güvenliğini riske atan hiçbir deney önerme.
 - Her aşamada ölçülebilir bir öğrenme kanıtı belirt.
-- Tüm metinler Türkçe ve öğretmenin doğrudan uygulayabileceği somut yönergeler olmalı.
+- Tüm metinler Türkçe ve eğitmenin doğrudan uygulayabileceği somut yönergeler olmalı.
+- Atölyeyi yürüten kişiye "eğitmen", katılan çocuğa "öğrenci" de. "Öğretmen" veya "ders" kelimelerini kullanma; oturum ya da atölye eğitimi de.
 - Her metin alanı TEK cümle olsun. Uzun anlatım yazma; kısa ve uygulanabilir yönerge ver.
 - Her aşamanın "title" alanı 5E aşama adını TEKRAR ETMESİN. Öğrenciyi meraklandıran kısa bir soru ya da somut bir eylem ifadesi yaz (ör. "Aynı ampuller, neden farklı parlaklık?").
 - "adaptationSummary" tek ve akıcı bir cümle olsun; koşulları maddeler hâlinde sıralama.

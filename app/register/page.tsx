@@ -18,10 +18,10 @@ export default async function RegisterPage() {
       <a className="skip-link" href="#main-content">Ana içeriğe geç</a>
       <section className="auth-story">
         <Brand />
-        <div><span className="overline">Eğitimci hesabı</span><h1>Atölyeyi sınıfa<br /><em>yaklaştırın.</em></h1><p>Onaylanmış paketleri kullanın, yazdırın ve sınıf deneyiminizi güvenle paylaşın.</p></div>
-        <small>Yeni açık kayıtlar güvenlik gereği yalnızca eğitimci rolü alır.</small>
+        <div><span className="overline">Eğitmen hesabı</span><h1>Atölyeyi katılımcıya<br /><em>yaklaştırın.</em></h1><p>Onaylanmış paketleri kullanın, yazdırın ve oturum deneyiminizi güvenle paylaşın.</p></div>
+        <small>Yeni açık kayıtlar güvenlik gereği yalnızca eğitmen rolü alır.</small>
       </section>
-      <section className="auth-card"><div><span className="overline">Yeni hesap</span><h2>Eğitimci hesabı oluşturun</h2><p>İçerik ve pedagog rolleri yönetici tarafından atanır.</p></div><AuthForm mode="register" action={registerAction} /></section>
+      <section className="auth-card"><div><span className="overline">Yeni hesap</span><h2>Eğitmen hesabı oluşturun</h2><p>İçerik ve pedagog rolleri yönetici tarafından atanır.</p></div><AuthForm mode="register" action={registerAction} /></section>
     </main>
   );
 }

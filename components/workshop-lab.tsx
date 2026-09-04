@@ -174,15 +174,21 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
               )}
               <div className="inline-fields">
                 <label><span>Yaş grubu</span><select defaultValue={selectedOutcome.cohort}><option>{AGE_COHORTS[selectedOutcome.cohort].label}</option></select></label>
-                <label><span>Pedagoji modeli</span><select defaultValue="5e"><option value="5e">5E Öğrenme Döngüsü</option></select></label>
-              </div>
+                <label><span>Pedagoji iskeleti</span><select defaultValue="5e" data-testid="pedagogy-select"><option value="5e">5E Öğrenme Döngüsü (İMKÂN)</option></select></label>
+              
+              <p className="panel-help">
+                5E, İMKÂN&apos;ın kullandığı aşama iskeletidir. Bilim Türkiye&apos;nin kendi
+                yaklaşımı “Yaparak Yaşayarak Öğrenme” ve proje tabanlı çalışmadır; bu
+                iskelet onun yerine geçmez, oturumu ölçülebilir aşamalara böler.
+              </p>
+            </div>
             </section>
 
             <section className="panel">
               <div className="panel-kicker"><Sparkles size={17} /> 02 · Gerçek sınıf koşulları</div>
               <div className="field-grid three">
                 <label><span>Süre</span><select value={profile.durationMinutes} onChange={(event) => update("durationMinutes", Number(event.target.value) as 40 | 60 | 80)}><option value="40">40 dakika</option><option value="60">60 dakika</option><option value="80">80 dakika</option></select></label>
-                <label><span>Sınıf mevcudu</span><input type="number" min="6" max="50" value={profile.classSize} onChange={(event) => update("classSize", Number(event.target.value))} /></label>
+                <label><span>Öğrenci sayısı</span><input type="number" min="6" max="50" value={profile.classSize} onChange={(event) => update("classSize", Number(event.target.value))} /></label>
                 <label><span>Grup büyüklüğü</span><select value={profile.groupSize} onChange={(event) => update("groupSize", Number(event.target.value))}><option value="3">3 öğrenci</option><option value="4">4 öğrenci</option><option value="5">5 öğrenci</option><option value="6">6 öğrenci</option></select></label>
               </div>
               {profileBlocked && <div className="field-error" role="alert"><CircleAlert /> {profileFindings.map((finding) => finding.message).join(" ")}</div>}
@@ -275,7 +281,7 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
 
             <section className="panel">
               <div className="panel-kicker"><PackageCheck size={17} /> 03 · Mevcut malzemeler</div>
-              <p className="panel-help">Sınıfta gerçekten bulunanları seçin. Sistem yalnızca bunları veya onaylı alternatiflerini kullanır.</p>
+              <p className="panel-help">Oturumda gerçekten bulunanları seçin. Sistem yalnızca bunları veya onaylı alternatiflerini kullanır.</p>
               <div className="preset-row">
                 {INVENTORY_PRESET_IDS.map((presetId) => {
                   const preset = INVENTORY_PRESETS[presetId];
@@ -381,12 +387,12 @@ function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving
           </div>
           <article className="stage-detail" role="tabpanel" data-testid={`stage-detail-${stage.key}`}>
             <div className="stage-heading"><div><span className="stage-number">0{activeStage + 1}</span><span className="overline">{stage.name}</span><h2>{stage.title}</h2></div><span className="time-pill"><Clock3 /> {stage.minutes} dk</span></div>
-            <div className="instruction-grid"><div><span className="tiny-heading">Öğretmen ne yapar?</span><p>{stage.teacherAction}</p></div><div><span className="tiny-heading">Öğrenci ne yapar?</span><p>{stage.studentAction}</p></div></div>
+            <div className="instruction-grid"><div><span className="tiny-heading">Eğitmen ne yapar?</span><p>{stage.teacherAction}</p></div><div><span className="tiny-heading">Öğrenci ne yapar?</span><p>{stage.studentAction}</p></div></div>
             <div className="evidence-box"><Eye /><div><strong>Beklenen öğrenme kanıtı</strong><p>{stage.evidence}</p></div></div>
             <div className="trace-line"><LockKeyhole /><div><strong>Kazanımla bağlantı</strong><p>{stage.objectiveConnection}</p></div></div>
           </article>
           <section className="all-stages print-only">
-            {plan.stages.map((item, index) => <article key={item.key}><span>0{index + 1} · {item.minutes} dk</span><h3>{item.name}: {item.title}</h3><p><b>Öğretmen:</b> {item.teacherAction}</p><p><b>Öğrenci:</b> {item.studentAction}</p><p><b>Kazanımla bağlantı:</b> {item.objectiveConnection}</p><strong>Kanıt: {item.evidence}</strong></article>)}
+            {plan.stages.map((item, index) => <article key={item.key}><span>0{index + 1} · {item.minutes} dk</span><h3>{item.name}: {item.title}</h3><p><b>Eğitmen:</b> {item.teacherAction}</p><p><b>Öğrenci:</b> {item.studentAction}</p><p><b>Kazanımla bağlantı:</b> {item.objectiveConnection}</p><strong>Kanıt: {item.evidence}</strong></article>)}
           </section>
           <MaterialLedger plan={plan} />
         </div>

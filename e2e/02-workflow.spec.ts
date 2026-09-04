@@ -43,7 +43,7 @@ test("content expert to pedagogue to manager to educator completes across real s
   await login(page, "educator@imkan.test");
   await page.goto(workshopUrl);
   await expect(page.locator(".package-stages > article")).toHaveCount(5);
-  await page.getByLabel("Sınıf geri bildirimi").fill("Kâğıt tabanlı model sınıfta uygulanabilir ve anlaşılırdı.");
+  await page.getByLabel("Oturum geri bildirimi").fill("Kâğıt tabanlı model sınıfta uygulanabilir ve anlaşılırdı.");
   await page.getByRole("button", { name: "Geri bildirimi kaydet" }).click();
   await expect(page.getByRole("status")).toContainText("başarıyla");
   await expect(page.getByTestId("feedback-average")).toHaveText("5");

@@ -10,7 +10,7 @@ import type { AuthUser } from "@/server/auth/session";
 const roleLabels: Record<AuthUser["role"], string> = {
   content_expert: "İçerik uzmanı",
   pedagogue: "Pedagog",
-  educator: "Eğitimci",
+  educator: "Eğitmen",
   manager: "Yönetici",
 };
 
@@ -39,7 +39,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user?:
           <div className="protocol-card">
             <span className="eyebrow">Güvence katmanı</span>
             <strong>İnsan onayı zorunlu</strong>
-            <p>Yapay zekâ önerir. Pedagog inceler. Eğitimci uygular.</p>
+            <p>Yapay zekâ önerir. Pedagog inceler. Eğitmen uygular.</p>
           </div>
           <a className="nav-item" href="/about">
             <CircleHelp size={18} /> Proje hakkında

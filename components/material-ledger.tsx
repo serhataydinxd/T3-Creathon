@@ -12,7 +12,7 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
   return (
     <section className="material-ledger" data-testid="material-ledger">
       <div className="ledger-heading">
-        <div><span className="overline">Malzeme listesi</span><h3>Sınıf için gereken malzemeler</h3></div>
+        <div><span className="overline">Malzeme listesi</span><h3>Oturum için gereken malzemeler</h3></div>
         <span>
           {plan.groupCount} grup · {plan.profile.classSize} öğrenci
           {costs ? ` · ${costs.acquisitionTry} ₺ temin · ${costs.lessonTry} ₺ sarf` : ` · ${plan.estimatedCostTry} ₺ tahmini`}
@@ -31,7 +31,7 @@ export function MaterialLedger({ plan }: { plan: WorkshopPlan }) {
               <th scope="col">Tür</th>
               <th scope="col">Birim</th>
               <th scope="col">Grup başına</th>
-              <th scope="col">Sınıf toplamı</th>
+              <th scope="col">Oturum toplamı</th>
               <th scope="col">Birim fiyat</th>
               <th scope="col">Liste değeri</th>
               <th scope="col">Durum</th>
