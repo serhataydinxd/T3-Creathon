@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { AGE_COHORT_IDS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
 import {
   ALL_ROUTES,
   CURRICULUM,
@@ -213,10 +214,21 @@ describe("route selection", () => {
   });
 });
 
-describe("outcome provenance", () => {
+describe("topic identity and provenance", () => {
+  it.each(OUTCOME_IDS)("%s declares a Bilim Türkiye domain and age cohort", (outcomeId) => {
+    const topic = CURRICULUM[outcomeId];
+    expect(WORKSHOP_DOMAIN_IDS).toContain(topic.domainId);
+    expect(AGE_COHORT_IDS).toContain(topic.cohort);
+    expect(topic.title.length).toBeGreaterThan(5);
+    expect(topic.summary.length).toBeGreaterThan(20);
+  });
+
   it("never presents an unverified curriculum code as verified", () => {
     for (const outcomeId of OUTCOME_IDS) {
-      const { outcome } = CURRICULUM[outcomeId];
+      const outcome = CURRICULUM[outcomeId].curriculumMapping;
+      // A topic without a mapping is legitimate; one with a mapping must be
+      // traceable.
+      if (!outcome) continue;
       expect(["verified", "unverified"]).toContain(outcome.verification);
       // Every entry must be traceable whatever its verification state: the
       // point of the corpus is that a code can be checked, not that it is

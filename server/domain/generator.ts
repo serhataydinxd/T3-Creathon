@@ -5,6 +5,7 @@ import {
   type OutcomeId,
 } from "@/server/content/curriculum";
 import { MATERIALS, MATERIALS_PRICED_ON } from "@/server/content/materials";
+import { WORKSHOP_DOMAINS } from "@/server/content/domains";
 import { buildStages, selectRoute } from "./routes";
 import type { Finding, MaterialLine, ResourceProfile, WorkshopPlan } from "./types";
 
@@ -138,15 +139,21 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     id: `${route.id}-v1`,
     mode: "REPLAY",
     title: content.title,
+    // A topic without a curriculum mapping still locks something: its own
+    // summary. The lock is about immutability during generation, not about MEB.
     objective: {
       id: `objective-${outcomeId}`,
-      code: content.outcome.code,
-      canonicalText: content.outcome.canonicalText,
-      source: content.outcome.source.document,
+      code: content.curriculumMapping?.code ?? WORKSHOP_DOMAINS[content.domainId].shortLabel,
+      canonicalText: content.curriculumMapping?.canonicalText ?? content.summary,
+      source:
+        content.curriculumMapping?.source.document ??
+        "Bilim Türkiye atölye programı",
       locked: true,
     },
     profile,
     outcomeId,
+    domainId: content.domainId,
+    cohort: content.cohort,
     routeId: route.id,
     routeName: route.name,
     routeTier: route.tier,

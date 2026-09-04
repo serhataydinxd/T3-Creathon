@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, Clock3, LockKeyhole, Sparkles, TriangleAlert 
 import { AppShell } from "@/components/app-shell";
 import { ALL_ROUTES, CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
 import { MATERIAL_IDS } from "@/server/content/materials";
+import { AGE_COHORTS, WORKSHOP_DOMAINS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
 import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "@/server/site";
 
 const TIER_LABEL: Record<string, string> = {
@@ -12,20 +13,23 @@ const TIER_LABEL: Record<string, string> = {
 };
 
 const routeCards = ALL_ROUTES.map(({ outcomeId, route }) => {
-  const { outcome } = CURRICULUM[outcomeId];
+  const topic = CURRICULUM[outcomeId];
   return {
     id: route.id,
-    title: `${outcome.unit} · ${route.name}`,
-    meta: `${outcome.gradeLevel}. sınıf · 5E · ${outcome.code}`,
+    title: `${topic.title} · ${route.name}`,
+    meta: `${WORKSHOP_DOMAINS[topic.domainId].shortLabel} · ${AGE_COHORTS[topic.cohort].label} · 5E`,
     tier: TIER_LABEL[route.tier] ?? route.tier,
     kind: route.tier === "minimal" ? "ready" : "approved",
   };
 });
 
 const corpusStats = {
-  outcomes: OUTCOME_IDS.length,
+  topics: OUTCOME_IDS.length,
   routes: ALL_ROUTES.length,
   materials: MATERIAL_IDS.length,
+  // Honest about coverage: several Bilim Türkiye domains have no content yet.
+  domainsCovered: new Set(OUTCOME_IDS.map((id) => CURRICULUM[id].domainId)).size,
+  domainsTotal: WORKSHOP_DOMAIN_IDS.length,
 };
 
 // Structured data so search engines can render the project as a named
@@ -109,15 +113,15 @@ export default function Home() {
         </div>
 
         <div className="stats-strip">
-          <div><span className="stat-icon mint"><CheckCircle2 /></span><strong>{corpusStats.outcomes}</strong><small>Onaylı demo kazanımı</small></div>
-          <div><span className="stat-icon amber"><Sparkles /></span><strong>{corpusStats.routes}</strong><small>Doğrulanmış kaynak rotası</small></div>
-          <div><span className="stat-icon blue"><Clock3 /></span><strong>{corpusStats.materials}</strong><small>Katalogdaki malzeme</small></div>
+          <div><span className="stat-icon mint"><CheckCircle2 /></span><strong>{corpusStats.topics}</strong><small>Atölye konusu</small></div>
+          <div><span className="stat-icon amber"><Sparkles /></span><strong>{corpusStats.routes}</strong><small>Kaynak duyarlı rota</small></div>
+          <div><span className="stat-icon blue"><Clock3 /></span><strong>{corpusStats.domainsCovered}/{corpusStats.domainsTotal}</strong><small>Kapsanan atölye alanı</small></div>
           <div><span className="stat-icon coral"><TriangleAlert /></span><strong>5</strong><small>İzlenebilir 5E aşaması</small></div>
         </div>
 
         <section className="content-section" id="nasil-calisir">
           <div className="section-heading">
-            <div><span className="overline">Demo kapsamı</span><h2>Korpustaki kaynak rotaları</h2></div>
+            <div><span className="overline">Demo kapsamı</span><h2>Atölye konuları ve rotaları</h2></div>
             <Link href="/lab">Tümünü gör <ArrowRight size={15} /></Link>
           </div>
           <div className="workshop-list">

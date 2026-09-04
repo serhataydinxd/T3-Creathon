@@ -119,6 +119,9 @@ export type WorkshopPlan = {
    * optional so packages saved before the corpus landed still render.
    */
   outcomeId?: string;
+  /** Bilim Türkiye workshop domain and age cohort the topic belongs to. */
+  domainId?: string;
+  cohort?: string;
   routeId?: string;
   routeName?: string;
   routeTier?: "minimal" | "classroom" | "lab";

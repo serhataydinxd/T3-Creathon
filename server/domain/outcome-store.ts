@@ -23,8 +23,11 @@ type Upsertable = {
   approved: boolean;
 };
 
-function toRow(outcomeId: OutcomeId): Upsertable {
-  const { outcome } = CURRICULUM[outcomeId];
+function toRow(outcomeId: OutcomeId): Upsertable | null {
+  const outcome = CURRICULUM[outcomeId].curriculumMapping;
+  // A topic with no curriculum mapping has nothing to record in a table keyed
+  // on official outcome wording.
+  if (!outcome) return null;
   return {
     code: outcome.code,
     canonicalText: outcome.canonicalText,
@@ -41,6 +44,7 @@ export async function syncOutcomes(): Promise<string[]> {
   const codes: string[] = [];
   for (const outcomeId of OUTCOME_IDS) {
     const row = toRow(outcomeId);
+    if (!row) continue;
     await db
       .insert(objectives)
       .values(row)
@@ -59,7 +63,9 @@ export async function requireOutcomeRowId(
   tx: { select: ReturnType<typeof getDb>["select"] },
   outcomeId: OutcomeId,
 ): Promise<string> {
-  const hash = outcomeContentHash(CURRICULUM[outcomeId].outcome.canonicalText);
+  const mapping = CURRICULUM[outcomeId].curriculumMapping;
+  if (!mapping) throw new Error("OUTCOME_HAS_NO_CURRICULUM_MAPPING");
+  const hash = outcomeContentHash(mapping.canonicalText);
   const [row] = await tx
     .select({ id: objectives.id })
     .from(objectives)

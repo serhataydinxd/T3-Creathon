@@ -25,6 +25,7 @@ import { MaterialLedger } from "@/components/material-ledger";
 import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
 import { INVENTORY_PRESETS, INVENTORY_PRESET_IDS, MATERIAL_OPTIONS } from "@/server/content/materials";
 import { CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
+import { AGE_COHORTS, WORKSHOP_DOMAINS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
 type View = "configure" | "generating" | "result";
@@ -121,7 +122,7 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
             {generationError && <div className="error-notice" role="alert"><CircleAlert />{generationError}</div>}
             <section className="panel objective-panel">
               <div className="panel-kicker"><LockKeyhole size={17} /> 01 · Kazanım Kilidi</div>
-              <label className="field-label" htmlFor="outcome-select">Onaylı öğrenme çıktısı</label>
+              <label className="field-label" htmlFor="outcome-select">Atölye konusu</label>
               <select
                 id="outcome-select"
                 data-testid="outcome-select"
@@ -129,24 +130,35 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
                 value={profile.outcomeId ?? OUTCOME_IDS[0]}
                 onChange={(event) => update("outcomeId", event.target.value)}
               >
-                {OUTCOME_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {CURRICULUM[id].outcome.unitOrder}. {CURRICULUM[id].outcome.unit} · {CURRICULUM[id].outcome.code}
-                  </option>
+                {WORKSHOP_DOMAIN_IDS.filter((domainId) =>
+                  OUTCOME_IDS.some((id) => CURRICULUM[id].domainId === domainId),
+                ).map((domainId) => (
+                  <optgroup key={domainId} label={WORKSHOP_DOMAINS[domainId].label}>
+                    {OUTCOME_IDS.filter((id) => CURRICULUM[id].domainId === domainId).map((id) => (
+                      <option key={id} value={id}>
+                        {CURRICULUM[id].title} · {AGE_COHORTS[CURRICULUM[id].cohort].label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <div className="locked-select" data-testid="objective-lock-preview">
-                <span><small>{selectedOutcome.outcome.code}</small> {selectedOutcome.outcome.canonicalText}</span>
+                <span><small>{WORKSHOP_DOMAINS[selectedOutcome.domainId].shortLabel}</small> {selectedOutcome.summary}</span>
                 <LockKeyhole size={18} />
               </div>
-              <p className="panel-help">
-                {selectedOutcome.outcome.source.document}
-                {selectedOutcome.outcome.verification === "unverified"
-                  ? " · kaynaktan aktarıldı, uzman doğrulaması bekliyor"
-                  : " · uzman tarafından doğrulandı"}
-              </p>
+              {selectedOutcome.curriculumMapping ? (
+                <p className="panel-help" data-testid="curriculum-mapping">
+                  MEB eşleştirmesi: <b>{selectedOutcome.curriculumMapping.code}</b> —{" "}
+                  {selectedOutcome.curriculumMapping.canonicalText}
+                  {selectedOutcome.curriculumMapping.verification === "unverified"
+                    ? " · kaynaktan aktarıldı, uzman doğrulaması bekliyor"
+                    : " · uzman tarafından doğrulandı"}
+                </p>
+              ) : (
+                <p className="panel-help">Bu atölye konusunun MEB kazanım eşleştirmesi tanımlı değil.</p>
+              )}
               <div className="inline-fields">
-                <label><span>Sınıf düzeyi</span><select defaultValue="7"><option>{selectedOutcome.outcome.gradeLevel}. sınıf</option></select></label>
+                <label><span>Yaş grubu</span><select defaultValue={selectedOutcome.cohort}><option>{AGE_COHORTS[selectedOutcome.cohort].label}</option></select></label>
                 <label><span>Pedagoji modeli</span><select defaultValue="5e"><option value="5e">5E Öğrenme Döngüsü</option></select></label>
               </div>
             </section>

@@ -1,4 +1,5 @@
 import type { MaterialId } from "./materials";
+import type { AgeCohortId, WorkshopDomainId } from "./domains";
 
 export type StageKey = "engage" | "explore" | "explain" | "elaborate" | "evaluate";
 
@@ -81,7 +82,13 @@ export type RouteDefinition = {
   safetyNotes?: readonly string[];
 };
 
-export type ApprovedOutcome = {
+/**
+ * A mapping onto an official curriculum outcome. Optional: a Bilim Türkiye
+ * workshop topic exists in its own right, and only some topics correspond to a
+ * MEB learning outcome. When one does, the mapping is what lets a visiting
+ * school group see which outcome the session supports.
+ */
+export type CurriculumMapping = {
   code: string;
   canonicalText: string;
   gradeLevel: number;
@@ -102,9 +109,18 @@ export type ApprovedOutcome = {
   verification: "verified" | "unverified";
 };
 
-export type OutcomeContent = {
-  outcome: ApprovedOutcome;
+/**
+ * One workshop topic: what Bilim Türkiye would run as an atölye session. Keyed
+ * on domain and cohort, which are its identity; the curriculum mapping is an
+ * optional property of it.
+ */
+export type WorkshopTopic = {
+  domainId: WorkshopDomainId;
+  cohort: AgeCohortId;
   title: string;
+  /** One sentence a trainer could read out to describe the session. */
+  summary: string;
+  curriculumMapping?: CurriculumMapping;
   baseStages: Record<StageKey, StageBlueprint>;
   routes: readonly RouteDefinition[];
 };
@@ -122,8 +138,12 @@ const TYMM = {
  * interface shows that state rather than implying approval.
  */
 
-const SPACE_AGE: OutcomeContent = {
-  outcome: {
+const SPACE_AGE: WorkshopTopic = {
+  domainId: "astronomy-aviation-space",
+  cohort: "12-14",
+  summary:
+    "Uzay gözlem araçlarını modelleyerek gök bilimi araçlarının işleyişini kavratır.",
+  curriculumMapping: {
     code: "FB.7.1.2",
     canonicalText: "Uzay gözlem araçları ile ilgili bilimsel model oluşturabilme",
     gradeLevel: 7,
@@ -214,8 +234,12 @@ const SPACE_AGE: OutcomeContent = {
   ],
 };
 
-const FORCE_AND_ENERGY: OutcomeContent = {
-  outcome: {
+const FORCE_AND_ENERGY: WorkshopTopic = {
+  domainId: "technology",
+  cohort: "12-14",
+  summary:
+    "Kinetik ve potansiyel enerjiyi ölçüm yaparak karşılaştırtır.",
+  curriculumMapping: {
     code: "FB.7.2.2",
     canonicalText: "Enerji çeşitlerinden kinetik ve potansiyel enerjiyi karşılaştırabilme",
     gradeLevel: 7,
@@ -305,8 +329,12 @@ const FORCE_AND_ENERGY: OutcomeContent = {
   ],
 };
 
-const BODY_SYSTEMS: OutcomeContent = {
-  outcome: {
+const BODY_SYSTEMS: WorkshopTopic = {
+  domainId: "natural-sciences",
+  cohort: "12-14",
+  summary:
+    "Sindirim sistemini model üzerinde izleyerek yapı ve görev ilişkisini kurdurur.",
+  curriculumMapping: {
     code: "FB.7.3.1",
     canonicalText: "Sindirim sistemini oluşturan yapı ve organların görevlerini model üzerinde gözlemleyebilme",
     gradeLevel: 7,
@@ -400,8 +428,12 @@ const BODY_SYSTEMS: OutcomeContent = {
   ],
 };
 
-const LIGHT_AND_LENSES: OutcomeContent = {
-  outcome: {
+const LIGHT_AND_LENSES: WorkshopTopic = {
+  domainId: "natural-sciences",
+  cohort: "12-14",
+  summary:
+    "Işığın ortam değiştirirken izlediği yolu gözleterek kırılma çıkarımı yaptırır.",
+  curriculumMapping: {
     code: "FB.7.4.1",
     canonicalText: "Ortam değiştiren ışığın izlediği yolu gözlemleyerek kırılma olayına yönelik bilimsel çıkarım yapabilme",
     gradeLevel: 7,
@@ -496,8 +528,12 @@ const LIGHT_AND_LENSES: OutcomeContent = {
   ],
 };
 
-const NATURE_OF_MATTER: OutcomeContent = {
-  outcome: {
+const NATURE_OF_MATTER: WorkshopTopic = {
+  domainId: "natural-sciences",
+  cohort: "12-14",
+  summary:
+    "Farklı moleküllerin modelini kurdurarak maddenin yapısını görünür kılar.",
+  curriculumMapping: {
     code: "FB.7.5.3",
     canonicalText: "Farklı moleküllere ait bilimsel model oluşturabilme",
     gradeLevel: 7,
@@ -589,8 +625,12 @@ const NATURE_OF_MATTER: OutcomeContent = {
   ],
 };
 
-const ELECTRIFICATION: OutcomeContent = {
-  outcome: {
+const ELECTRIFICATION: WorkshopTopic = {
+  domainId: "technology",
+  cohort: "12-14",
+  summary:
+    "Sürtme, dokunma ve etki ile elektriklenmeyi deneyle ayırt ettirir.",
+  curriculumMapping: {
     code: "FB.7.6.2",
     canonicalText: "Elektriklenme çeşitlerini belirlemeye yönelik deney yapabilme",
     gradeLevel: 7,
@@ -688,8 +728,12 @@ const ELECTRIFICATION: OutcomeContent = {
   ],
 };
 
-const SUSTAINABLE_LIFE: OutcomeContent = {
-  outcome: {
+const SUSTAINABLE_LIFE: WorkshopTopic = {
+  domainId: "natural-sciences",
+  cohort: "12-14",
+  summary:
+    "Besin zincirindeki ilişkileri kartlarla yapılandırtır.",
+  curriculumMapping: {
     code: "FB.7.7.1",
     canonicalText: "Besin zincirindeki canlılar arasındaki ilişkileri yapılandırabilme",
     gradeLevel: 7,
@@ -788,7 +832,7 @@ export const CURRICULUM = {
   "nature-of-matter": NATURE_OF_MATTER,
   electrification: ELECTRIFICATION,
   "sustainable-life": SUSTAINABLE_LIFE,
-} as const satisfies Record<string, OutcomeContent>;
+} as const satisfies Record<string, WorkshopTopic>;
 
 export type OutcomeId = keyof typeof CURRICULUM;
 
@@ -797,7 +841,7 @@ export const OUTCOME_IDS = Object.keys(CURRICULUM) as [OutcomeId, ...OutcomeId[]
 /** The outcome the lab opens on until a teacher picks another. */
 export const DEFAULT_OUTCOME_ID: OutcomeId = "electrification";
 
-export function getOutcomeContent(id: OutcomeId): OutcomeContent {
+export function getOutcomeContent(id: OutcomeId): WorkshopTopic {
   return CURRICULUM[id];
 }
 
