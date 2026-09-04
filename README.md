@@ -1,10 +1,10 @@
 # İMKÂN
 
-**Onaylı bir kazanımı, okulun gerçek imkânlarına uyarlanmış, pedagog onaylı ve
-sınıfta basılıp uygulanabilir bir atölye paketine dönüştüren yapay zekâ
+**Bilim Türkiye atölye konularını, merkezin gerçek imkânlarına uyarlanmış,
+pedagog onaylı ve yazdırılabilir bir oturum paketine dönüştüren yapay zekâ
 asistanı.**
 
-> Kazanım sabit kalır; atölye, okulun imkânlarına göre yeniden tasarlanır.
+> Atölye konusu sabit kalır; oturum, merkezin imkânlarına göre yeniden tasarlanır.
 
 🔗 **Canlı demo:** https://d1a8sno49hnlhc.cloudfront.net
 
@@ -13,26 +13,29 @@ Eğitim İçeriği Geliştirme Asistanı**
 
 ![İMKÂN onaylı atölye paketi](docs/images/paket.png)
 
-*Elektriği ve interneti olmayan bir sınıf için yapay zekâ tarafından yazılmış,
-pedagog onaylı ve yayımlanmış atölye paketi. Kazanım kilitli, malzeme listesi ve
-maliyet kod tarafından hesaplanmış.*
+*Yapay zekâ tarafından yazılmış, pedagog onaylı ve yayımlanmış bir oturum
+paketi. Konu kilitli; rota, malzeme listesi ve maliyet kod tarafından
+hesaplanmış.*
 
 ---
 
 ## Hangi problemi çözüyor?
 
-Bir fen öğretmeni, tek bir kazanım için atölye planı hazırlarken şunları
-tek tek düşünmek zorundadır: 40 dakikaya sığacak mı, 30 öğrenci kaç gruba
-bölünecek, okulda priz var mı, internet çekiyor mu, deney seti bütçeye
-sığıyor mu, görme güçlüğü olan öğrenci için alternatif ne olacak?
+Bilim Türkiye 30 bilim merkezinde 6-14 yaş grubuna atölye eğitimi veriyor ve
+merkezler aynı donanıma sahip değil: bazısında planetaryum var, bazısında
+sergi alanı, bazısında hiçbiri. Bir eğitmen aynı atölye konusunu hazırlarken
+şunları tek tek düşünmek zorunda: bir saate sığacak mı, katılımcılar kaç gruba
+bölünecek, merkezde kubbe var mı, malzeme elde var mı, bütçeye sığıyor mu,
+erişilebilirlik ihtiyacı olan katılımcı için alternatif ne olacak?
 
 Hazır plan bankaları bu soruları cevaplamaz. Genel amaçlı bir sohbet robotu
-ise elinizde olmayan malzemeyi ister, süreyi tutturmaz ve kazanımı sessizce
+ise elinizde olmayan malzemeyi ister, süreyi tutturmaz ve konuyu sessizce
 değiştirir. Ortaya çıkan planın pedagojik olarak onaylandığına dair hiçbir iz
 kalmaz.
 
-**İMKÂN tam bu boşluğu doldurur:** kazanımı kilitler, okulun imkânlarını girdi
-olarak alır ve aynı kazanıma ulaşan farklı bir yol üretir.
+**İMKÂN tam bu boşluğu doldurur:** konuyu kilitler, mekânın imkânlarını girdi
+olarak alır, aynı konuya ulaşan farklı bir rota üretir ve uygulanamayan
+rotanın nedenini yazar.
 
 ## Neyi kolaylaştırıyor?
 
@@ -42,28 +45,31 @@ olarak alır ve aynı kazanıma ulaşan farklı bir yol üretir.
 | Elinizde olmayan malzeme önerilir | Yalnızca işaretlediğiniz malzemeler kullanılır |
 | Bütçe sonradan fark edilir | Maliyet hesaplanır, bütçeyi aşarsa üretim durdurulur |
 | Süre tahminidir | Aşama süreleri istenen süreye birebir bölünür |
-| Elektrik/internet yoksa plan çöker | Onaylı, çevrimdışı alternatife otomatik geçilir |
+| Merkezde kubbe veya sergi yoksa plan çöker | Onaylı alternatif rotaya geçilir, nedeni yazılır |
 | "Bunu kim onayladı?" belirsizdir | Her sürümün pedagog onayı ve karar geçmişi kayıtlıdır |
-| Alışveriş listesi elle çıkarılır | Grup başına ve sınıf toplamı malzeme listesi hazır gelir |
+| Alışveriş listesi elle çıkarılır | Grup başına ve oturum toplamı malzeme listesi hazır gelir |
 
 ### Somut örnek
 
-**FB.7.4.1 — "Ortam değiştiren ışığın izlediği yolu gözlemleyerek kırılma
-olayına yönelik bilimsel çıkarım yapabilme"** çıktısı için:
+**Uzay Çağı** temasındaki *"Uzay Gözlem Araçları: Kendi Modelini Kur"* konusu,
+aynı oturum, iki merkez:
 
-Merceği olmayan bir sınıfta İMKÂN **su dolu şeffaf bardakla** yürütülen rotayı
-seçer, neden seçtiğini yazar ("Gerekli malzemeler envanterde yok: Yakınsak
-mercek") ve aynı çıkarımı hedefleyen, kırtasiye ile uygulanabilir bir paket
-üretir.
+**Bilim Trabzon** (80 kişilik 12 m kubbe yayımlanmış) seçildiğinde İMKÂN
+planetaryum rotasını seçer: kubbede aynı gökyüzü çıplak gözle ve teleskop
+görüş alanıyla gösterilir, pakete kubbe güvenlik kuralı eklenir.
 
-Aynı sınıfa yakınsak mercek eklendiğinde laboratuvar rotası seçilir ve pakete
-zorunlu güvenlik uyarısı eklenir: **mercek hiçbir koşulda Güneş'e
-doğrultulmaz.** Öğrenme çıktısı her iki senaryoda da aynı kalır.
+**Bilim Çorum** (kubbe yayımlanmamış) seçildiğinde kâğıt tüp modeli rotasına
+geçer, nedenini yazar (*"Mekânda gereken donanım yok: Planetaryum"*) ve
+yayımlanmamış donanımı "yok" saymadığını belirterek eğitmene işaretleme
+imkânı bırakır.
+
+Format **Çevrim İçi**'ye alındığında kubbe rotası yine düşer, ama bu kez farklı
+ve doğru bir gerekçeyle: katılımcı evdedir.
 
 ## Yapay zekâ nerede devreye giriyor?
 
-Atölyenin **metnini** bir dil modeli yazar: aşama başlıkları, öğretmen ve
-öğrenci yönergeleri, öğrenme kanıtı ve kazanım bağlantısı.
+Oturumun **metnini** bir dil modeli yazar: aşama başlıkları, eğitmen ve
+öğrenci yönergeleri, öğrenme kanıtı ve konu bağlantısı.
 
 Modelin **dokunamadığı** şeyler kod tarafından yeniden hesaplanır:
 
@@ -71,7 +77,8 @@ Modelin **dokunamadığı** şeyler kod tarafından yeniden hesaplanır:
 - Aşama sürelerinin dağılımı ve toplamı
 - Grup sayısı, malzeme miktarları ve maliyet
 - Bütçe, güvenlik ve kapasite kontrolleri
-- Kilitli kazanım metni
+- Kilitli atölye konusu
+- Rota uygunluğu: merkez donanımı, malzeme, format ve bütçe
 
 Taslak kaydedilirken sunucu iskeleti sıfırdan yeniden üretir ve yalnızca
 incelenen metni üzerine yerleştirir. Bu nedenle model, elinizde olmayan bir
@@ -84,9 +91,9 @@ Sağlayıcı yavaşlarsa, boş yanıt dönerse veya sözleşmeyi bozarsa sistem
 ## Rol akışı
 
 ```
-İçerik uzmanı        Pedagog                 Yönetici        Eğitimci
+İçerik uzmanı        Pedagog                 Yönetici        Eğitmen 
 ─────────────        ───────                 ────────        ────────
-koşulları girer  →   kazanım bağlantısını
+koşulları girer  →   konu bağlantısını
 paketi üretir        ve kanıtları inceler →  yayımlar    →   uygular
 taslağı gönderir     onaylar / revizyon                      yazdırır
                      ister                                   geri bildirim
@@ -94,7 +101,7 @@ taslağı gönderir     onaylar / revizyon                      yazdırır
 ```
 
 Kendi paketini onaylamak engellidir. Değişiklik istenen sürüm dondurulur, yeni
-sürüm oluşturulur ve eski sürüm "eski sürüm" olarak kayıtta kalır. Eğitimci geri
+sürüm oluşturulur ve eski sürüm "eski sürüm" olarak kayıtta kalır. Eğitmen geri
 bildirimi yöneticinin yeniden kullanım özetine düşer.
 
 ## Şu an çalışan kısım
@@ -110,17 +117,21 @@ Uçtan uca çalışan, herkese açık bir dikey dilim:
 - Öğrenme çıktısı–kanıt izlenebilirliği olan beş aşamalı 5E planı
 - Taslak → inceleme → onay → yayım → geri bildirim iş akışı
 - Değişmez sürüm geçmişi ve denetlenebilir durum geçişleri
-- Puan dağılımıyla sınıf geri bildirimi ve yöneticiye yeniden kullanım özeti
-- Yazdırılabilir eğitimci paketi (öğretmen/öğrenci yönergeleri, malzeme tablosu)
+- Puan dağılımıyla oturum geri bildirimi ve yöneticiye yeniden kullanım özeti
+- Yazdırılabilir eğitmen paketi (öğretmen/öğrenci yönergeleri, malzeme tablosu)
 - Onay bekleyen kayıt akışı ve yönetici tarafından rol atama
 - Argon2id şifreleme, iptal edilebilir sunucu tabanlı oturumlar
 - HTTPS yayın, gerçek tarayıcı testleri ve erişilebilirlik denetimi
 
-**Dürüst kapsam sınırı:** korpus, **Türkiye Yüzyılı Maarif Modeli** 7. sınıf
-Fen Bilimleri programının yedi ünitesinden birer öğrenme çıktısı ve bunlara
-bağlı 14 rota içerir. Kodlar ve resmî metinler MEB'in ünite sayfalarından
-birebir aktarılmıştır ancak **alan uzmanı doğrulaması beklemektedir**; arayüz
-bu durumu her çıktının yanında gösterir. Tek pedagoji modeli (5E) tanımlıdır.
+**Dürüst kapsam sınırı:** korpus 7 atölye konusu ve 16 rota içerir, ancak bu
+Bilim Türkiye'nin yedi atölye temasından yalnızca **üçünü** kapsar; Matematik,
+Girişim, Tasarım ve Tarım Teknolojileri için içerik henüz yok ve ana sayfa
+sayacı bunu 3/7 olarak gösterir. Konuların okul kazanımıyla tamamlayıcılığı
+MEB'in ünite sayfalarından birebir aktarılmıştır ancak **alan uzmanı
+doğrulaması beklemektedir**. 5E, İMKÂN'ın aşama iskeletidir; Bilim
+Türkiye'nin kendi yaklaşımı "Yaparak Yaşayarak Öğrenme" ve proje tabanlı
+çalışmadır ve İMKÂN bunu uygulamaz. Çok oturumlu uzun süreli programlar
+modellenmemiştir; format seçilebilir ancak plan tek oturumu kapsadığını yazar.
 
 ## Hızlı başlangıç
 
@@ -134,8 +145,8 @@ npm run dev
 ```
 
 `http://localhost:3000` adresini açın ve **Atölye laboratuvarı**'na girin.
-Varsayılan profil ana demo senaryosunu kurar: 30 öğrenci, 40 dakika, elektrik
-ve internet yok, yalnızca sınıf kırtasiyesi.
+Varsayılan profil ana demo senaryosunu kurar: 30 öğrenci, bir saatlik okul
+grubu oturumu, merkez donanımı yok, yalnızca temel kırtasiye.
 
 Yerel hesaplar (`DEMO_PASSWORD` verilmezse şifre `I.mkanDemo!2026`):
 
@@ -143,7 +154,7 @@ Yerel hesaplar (`DEMO_PASSWORD` verilmezse şifre `I.mkanDemo!2026`):
 |---|---|
 | `content@imkan.test` | İçerik uzmanı |
 | `pedagogue@imkan.test` | Pedagog |
-| `educator@imkan.test` | Eğitimci |
+| `educator@imkan.test` | Eğitmen |
 | `manager@imkan.test` | Yönetici |
 
 Herkese açık kayıtla oluşturulan hesaplar, bir yönetici etkinleştirene kadar

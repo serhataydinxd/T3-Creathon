@@ -1,16 +1,19 @@
 /**
  * Single source of truth for the public identity of the deployment, shared by
  * the metadata routes so robots.txt, the sitemap, llms.txt and the page
- * metadata can never disagree about the canonical origin.
+ * metadata can never disagree about the canonical origin — or about what the
+ * product is. The wording uses Bilim Türkiye's own vocabulary: atölye konusu,
+ * oturum, merkez, eğitmen.
  */
 
 export const SITE_NAME = "İMKÂN";
 
-export const SITE_TAGLINE = "Kazanım sabit kalır; atölye, okulun imkânlarına göre yeniden tasarlanır.";
+export const SITE_TAGLINE =
+  "Atölye konusu sabit kalır; oturum, merkezin imkânlarına göre yeniden tasarlanır.";
 
 export const SITE_DESCRIPTION =
-  "Onaylı bir kazanımı, okulun gerçek imkânlarına uyarlanmış, pedagog onaylı ve " +
-  "sınıfta basılıp uygulanabilir bir atölye paketine dönüştüren yapay zekâ asistanı.";
+  "Bilim Türkiye atölye konularını, merkezin gerçek imkânlarına uyarlanmış, " +
+  "pedagog onaylı ve yazdırılabilir bir oturum paketine dönüştüren yapay zekâ asistanı.";
 
 const FALLBACK_PRODUCTION_URL = "https://d1a8sno49hnlhc.cloudfront.net";
 const FALLBACK_DEVELOPMENT_URL = "http://localhost:3000";

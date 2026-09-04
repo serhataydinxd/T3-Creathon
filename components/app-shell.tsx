@@ -28,8 +28,8 @@ export function AppShell({ children, user }: { children: React.ReactNode; user?:
           <Link className={`nav-item ${pathname === "/lab" ? "active" : ""}`} href={user ? "/lab" : "/login"}>
             <FlaskConical size={18} /> Atölye laboratuvarı
           </Link>
-          <Link className="nav-item" href="/#kazanım-kilidi">
-            <LockKeyhole size={18} /> Kazanım Kilidi
+          <Link className="nav-item" href="/#konu-kilidi">
+            <LockKeyhole size={18} /> Konu Kilidi
           </Link>
           <a className={`nav-item ${pathname === "/about" ? "active" : ""}`} href="/about#kaynaklar">
             <BookOpen size={18} /> İçerik kütüphanesi

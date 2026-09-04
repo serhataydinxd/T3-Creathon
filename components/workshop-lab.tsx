@@ -136,7 +136,7 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
           <div className="form-stack">
             {generationError && <div className="error-notice" role="alert"><CircleAlert />{generationError}</div>}
             <section className="panel objective-panel">
-              <div className="panel-kicker"><LockKeyhole size={17} /> 01 · Kazanım Kilidi</div>
+              <div className="panel-kicker"><LockKeyhole size={17} /> 01 · Konu Kilidi</div>
               <label className="field-label" htmlFor="outcome-select">Atölye konusu</label>
               <select
                 id="outcome-select"
@@ -376,7 +376,7 @@ function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving
 
       <section className="objective-lock-card" data-testid="objective-lock">
         <div className="lock-symbol"><LockKeyhole /></div>
-        <div><span className="overline">Kazanım Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div>
+        <div><span className="overline">Konu Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div>
         <span className="verified"><ShieldCheck /> Doğrulandı</span>
       </section>
 
@@ -389,10 +389,10 @@ function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving
             <div className="stage-heading"><div><span className="stage-number">0{activeStage + 1}</span><span className="overline">{stage.name}</span><h2>{stage.title}</h2></div><span className="time-pill"><Clock3 /> {stage.minutes} dk</span></div>
             <div className="instruction-grid"><div><span className="tiny-heading">Eğitmen ne yapar?</span><p>{stage.teacherAction}</p></div><div><span className="tiny-heading">Öğrenci ne yapar?</span><p>{stage.studentAction}</p></div></div>
             <div className="evidence-box"><Eye /><div><strong>Beklenen öğrenme kanıtı</strong><p>{stage.evidence}</p></div></div>
-            <div className="trace-line"><LockKeyhole /><div><strong>Kazanımla bağlantı</strong><p>{stage.objectiveConnection}</p></div></div>
+            <div className="trace-line"><LockKeyhole /><div><strong>Konu bağlantısı</strong><p>{stage.objectiveConnection}</p></div></div>
           </article>
           <section className="all-stages print-only">
-            {plan.stages.map((item, index) => <article key={item.key}><span>0{index + 1} · {item.minutes} dk</span><h3>{item.name}: {item.title}</h3><p><b>Eğitmen:</b> {item.teacherAction}</p><p><b>Öğrenci:</b> {item.studentAction}</p><p><b>Kazanımla bağlantı:</b> {item.objectiveConnection}</p><strong>Kanıt: {item.evidence}</strong></article>)}
+            {plan.stages.map((item, index) => <article key={item.key}><span>0{index + 1} · {item.minutes} dk</span><h3>{item.name}: {item.title}</h3><p><b>Eğitmen:</b> {item.teacherAction}</p><p><b>Öğrenci:</b> {item.studentAction}</p><p><b>Konu bağlantısı:</b> {item.objectiveConnection}</p><strong>Kanıt: {item.evidence}</strong></article>)}
           </section>
           <MaterialLedger plan={plan} />
         </div>
@@ -400,7 +400,7 @@ function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving
         <aside className="validation-panel">
           <div className="validation-title"><ShieldCheck /><div><span className="overline">Deterministik kontrol</span><h3>Uygulanabilirlik raporu</h3></div></div>
           <div className="check-list">
-            <div>{coveredStages === plan.stages.length ? <CheckCircle2 /> : <CircleAlert />}<span><strong>Kazanım kapsama</strong><small>{coveredStages} / {plan.stages.length} aşama bağlı</small></span></div>
+            <div>{coveredStages === plan.stages.length ? <CheckCircle2 /> : <CircleAlert />}<span><strong>Konu kapsama</strong><small>{coveredStages} / {plan.stages.length} aşama bağlı</small></span></div>
             <div>{plan.stages.reduce((sum, item) => sum + item.minutes, 0) === plan.profile.durationMinutes ? <CheckCircle2 /> : <CircleAlert />}<span><strong>Süre toplamı</strong><small>{plan.stages.reduce((sum, item) => sum + item.minutes, 0)} / {plan.profile.durationMinutes} dakika</small></span></div>
             <div><CheckCircle2 /><span><strong>Grup kapasitesi</strong><small>{plan.groupCount} grup planlandı</small></span></div>
             <div>{safetyBlocked ? <CircleAlert /> : <CheckCircle2 />}<span><strong>Güvenlik sınırları</strong><small>{safetyBlocked ? "İnceleme gerekli" : "İhlal yok"}</small></span></div>

@@ -11,7 +11,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(resolveSiteUrl()),
   title: {
-    default: `${SITE_NAME} — Kazanım sabit, atölye uyarlanabilir`,
+    default: `${SITE_NAME} — Atölye konusu sabit, oturum uyarlanabilir`,
     template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -19,13 +19,13 @@ export const metadata: Metadata = {
   authors: [{ name: "Node42" }],
   creator: "Node42",
   keywords: [
-    "atölye planı",
-    "kazanım",
-    "5E öğrenme döngüsü",
-    "fen bilimleri",
+    "Bilim Türkiye",
+    "atölye eğitimi",
+    "bilim merkezi",
+    "eğitmen",
+    "atölye içeriği üretimi",
     "yapay zekâ eğitim asistanı",
-    "MEB müfredat",
-    "ders planı üretimi",
+    "5E öğrenme döngüsü",
   ],
   category: "education",
   alternates: { canonical: "/" },

@@ -80,8 +80,12 @@ describe("llms.txt", () => {
 
   it("states the boundary between what the model writes and what code owns", async () => {
     const body = await llms().text();
-    expect(body).toContain("yalnızca atölyenin metnini");
-    expect(body).toContain("Kilitli kazanım metni");
+    expect(body).toContain("yalnızca oturumun metnini");
+    expect(body).toContain("Kilitli atölye konusu");
+    // The corpus coverage gap must be stated, not implied.
+    expect(body).toContain("içerik henüz yok");
+    // And the curriculum position, since it is the question a reader will have.
+    expect(body).toContain("kamuya açık bir eşleme bulunamamıştır");
     expect(body).toContain("çevrimdışı plana düşer");
   });
 

@@ -66,9 +66,10 @@ const structuredData = {
         educationalRole: "teacher",
       },
       featureList: [
-        "Kazanım kilidi ile değiştirilemez öğrenme hedefi",
-        "Süre, bütçe, elektrik, internet ve malzemeye göre uyarlama",
-        "Grup başına ve sınıf toplamı malzeme listesi ve maliyet",
+        "Konu kilidi ile değiştirilemez atölye konusu",
+        "Merkez donanımına ve eldeki malzemeye göre rota seçimi",
+        "Reddedilen rotanın gerekçesinin yazılması",
+        "Grup başına ve oturum toplamı malzeme listesi ve maliyet",
         "Zorunlu pedagojik inceleme ve onay akışı",
         "Yazdırılabilir eğitmen paketi",
       ],
@@ -90,9 +91,9 @@ export default function Home() {
         <div className="hero-grid">
           <div>
             <span className="overline">Bilim Türkiye · İçerik üretim sistemi</span>
-            <h1>Kazanım sabit.<br /><em>Atölye uyarlanabilir.</em></h1>
+            <h1>Konu sabit.<br /><em>Oturum uyarlanabilir.</em></h1>
             <p className="hero-copy">
-              Öğrenme hedefini değiştirmeden; süre, sınıf, bütçe ve mevcut malzemelere göre uygulanabilir atölye paketleri üretin.
+              Atölye konusunu değiştirmeden; süre, katılımcı sayısı, bütçe, merkez donanımı ve eldeki malzemeye göre uygulanabilir oturum paketleri üretin.
             </p>
             <div className="hero-actions">
               <Link className="button primary" href="/lab">
@@ -104,7 +105,7 @@ export default function Home() {
           <div className="hero-visual" aria-hidden="true">
             <div className="orbit orbit-one" />
             <div className="orbit orbit-two" />
-            <div className="core-lock"><LockKeyhole size={30} /><span>Kazanım<br />Kilidi</span></div>
+            <div className="core-lock"><LockKeyhole size={30} /><span>Konu<br />Kilidi</span></div>
             <span className="constraint-chip chip-time">40 dakika</span>
             <span className="constraint-chip chip-class">30 öğrenci</span>
             <span className="constraint-chip chip-material">Kâğıt + kalem</span>
@@ -136,10 +137,10 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="principles" id="kazanım-kilidi">
-          <div><span>01</span><h3>Kazanımı kilitle</h3><p>Onaylı hedef, üretim boyunca değiştirilemez ve kaynak metinden gösterilir.</p></div>
-          <div><span>02</span><h3>İmkânı tanımla</h3><p>Süre, grup, bütçe, erişilebilirlik ve sınıftaki gerçek malzemeleri girin.</p></div>
-          <div><span>03</span><h3>Kanıtı görün</h3><p>Her etkinliğin kazanımla ilişkisini ve ölçme kanıtını açıkça inceleyin.</p></div>
+        <section className="principles" id="konu-kilidi">
+          <div><span>01</span><h3>Konuyu kilitle</h3><p>Seçilen atölye konusu üretim boyunca değiştirilemez ve kaynağıyla gösterilir.</p></div>
+          <div><span>02</span><h3>İmkânı tanımla</h3><p>Süre, grup, bütçe, erişilebilirlik, merkez donanımı ve eldeki malzemeyi girin.</p></div>
+          <div><span>03</span><h3>Kanıtı görün</h3><p>Her etkinliğin konuyla ilişkisini ve ölçme kanıtını açıkça inceleyin.</p></div>
         </section>
       </section>
     </AppShell>
