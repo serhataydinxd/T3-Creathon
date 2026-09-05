@@ -1,9 +1,10 @@
 # İMKÂN
 
-**Bilim Türkiye atölye konularını, merkezin gerçek imkânlarına uyarlanmış,
-pedagog onaylı ve yazdırılabilir bir oturum paketine dönüştüren yapay zekâ
-asistanı.**
+**Bilim Türkiye atölye konularını merkezin gerçek imkânlarına uyarlayan;
+uygulamayı, raporunu ve başka merkeze uyarlanmasını tek bir izlenebilir akışta
+toplayan yapay zekâ asistanı.**
 
+> Tasarla → Uygula → Raporla → Paylaş → Başka merkeze uyarla.
 > Atölye konusu sabit kalır; oturum, merkezin imkânlarına göre yeniden tasarlanır.
 
 🔗 **Canlı demo:** https://d1a8sno49hnlhc.cloudfront.net
@@ -48,6 +49,10 @@ rotanın nedenini yazar.
 | Merkezde kubbe veya sergi yoksa plan çöker | Onaylı alternatif rotaya geçilir, nedeni yazılır |
 | "Bunu kim onayladı?" belirsizdir | Her sürümün pedagog onayı ve karar geçmişi kayıtlıdır |
 | Alışveriş listesi elle çıkarılır | Grup başına ve oturum toplamı malzeme listesi hazır gelir |
+| Uygulamadan sonra ne olduğu kayıtsız kalır | Planlanan ve gerçekleşen yan yana kaydedilir |
+| Rapor yazmak saatler alır | Yapay zekâ yalnızca kaydedilen olgulardan taslak yazar |
+| İyi bir oturum tek merkezde kalır | Onaylı rapor kütüphaneye girer, başka merkez uyarlar |
+| "Bizde de olur mu?" tahminle cevaplanır | Hedef merkezle uyum kodla karşılaştırılır |
 
 ### Somut örnek
 
@@ -58,10 +63,16 @@ aynı oturum, iki merkez:
 planetaryum rotasını seçer: kubbede aynı gökyüzü çıplak gözle ve teleskop
 görüş alanıyla gösterilir, pakete kubbe güvenlik kuralı eklenir.
 
-**Bilim Çorum** (kubbe yayımlanmamış) seçildiğinde kâğıt tüp modeli rotasına
-geçer, nedenini yazar (*"Mekânda gereken donanım yok: Planetaryum"*) ve
-yayımlanmamış donanımı "yok" saymadığını belirterek eğitmene işaretleme
-imkânı bırakır.
+**Bilim Çorum** (merkez sayfasında kubbeden söz edilmiyor) seçildiğinde İMKÂN
+kubbenin **olmadığını varsaymaz**. Donanım durumu üç değerlidir — *var*,
+*yok*, *bilinmiyor* — ve yayımlanmamış bir donanım "bilinmiyor" olarak kalır.
+Planetaryum rotası elenmez; **belirsiz** olarak raporlanır ve neyin
+doğrulanması gerektiği yazılır. Eğitmen merkezde bulunup kubbenin olmadığını
+doğrularsa rota o zaman uygulanamaz olur ve kâğıt tüp modeline geçilir.
+
+Bu ayrım ürünün merkezindedir: *"bu merkezde kubbe yok"* ile *"kimse kubbe
+olup olmadığını kaydetmemiş"* aynı şey değildir ve yalnızca birincisi bir
+rotayı elemeye yeter.
 
 Format **Çevrim İçi**'ye alındığında kubbe rotası yine düşer, ama bu kez farklı
 ve doğru bir gerekçeyle: katılımcı evdedir.
@@ -79,30 +90,52 @@ Modelin **dokunamadığı** şeyler kod tarafından yeniden hesaplanır:
 - Bütçe, güvenlik ve kapasite kontrolleri
 - Kilitli atölye konusu
 - Rota uygunluğu: merkez donanımı, malzeme, format ve bütçe
+- Merkez donanımının üç durumlu değerlendirmesi ve rota adaylarının sırası
+- Planlanan ile gerçekleşen değerlerin ayrı tutulması
+- Hedef merkezle uyum karşılaştırması
+- Sürüm, durum geçişleri ve paylaşım kuralları
 
 Taslak kaydedilirken sunucu iskeleti sıfırdan yeniden üretir ve yalnızca
 incelenen metni üzerine yerleştirir. Bu nedenle model, elinizde olmayan bir
 malzemeyi veya bütçeyi aşan bir kurulumu kayda geçiremez.
 
+Uygulama raporunda dil modelinin işi daha da dardır: yalnızca eğitmenin
+kaydettiği olguları anlatır. Girilmemiş bir sayıyı, süreyi veya maliyeti
+uyduramaz; atlanmış bir aşamayı yapılmış gösteremez; gözlenmemiş bir öğrenmeyi
+gerçekleşmiş sayamaz; bir güvenlik olayını gizleyemez. Kayıtta olmayan alan
+"Belirtilmedi" olarak kalır.
+
 Sağlayıcı yavaşlarsa, boş yanıt dönerse veya sözleşmeyi bozarsa sistem
-**doğrulanmış çevrimdışı plana düşer** ve bunu bir uyarı olarak bildirir.
-Üretim her koşulda kullanılabilir bir atölye döndürür.
+**doğrulanmış çevrimdışı metne düşer** ve bunu bir uyarı olarak bildirir. Bu
+yedek bir tahmin değildir: olgular zaten kayıtlı olduğu için aynı bilgiyi sade
+biçimde yazar. Ne atölye üretimi ne de rapor bir sağlayıcıya bağlıdır.
 
 ## Rol akışı
 
 ```
-İçerik uzmanı        Pedagog                 Yönetici        Eğitmen 
-─────────────        ───────                 ────────        ────────
-koşulları girer  →   konu bağlantısını
-paketi üretir        ve kanıtları inceler →  yayımlar    →   uygular
-taslağı gönderir     onaylar / revizyon                      yazdırır
-                     ister                                   geri bildirim
-                                                             bırakır
+İçerik uzmanı      Pedagog            Yönetici        Eğitmen
+─────────────      ───────            ────────        ────────
+koşulları girer →  konu bağlantısını
+paketi üretir      ve kanıtları
+taslağı gönderir   inceler          →  yayımlar    →   uygular
+                   onaylar /                           uygulama kaydı tutar
+                   revizyon ister                      rapor taslağı üretir
+                                                       incelemeye gönderir
+                          ↑                                    │
+                          └──────── raporu inceler ────────────┘
+                                    ve onaylar
+                                          │
+                                    yönetici kütüphanede yayımlar
+                                          │
+                        başka merkezdeki eğitmen "Merkezime uyarla" ile
+                        bağımsız bir taslak başlatır (kaynak değişmez)
 ```
 
-Kendi paketini onaylamak engellidir. Değişiklik istenen sürüm dondurulur, yeni
-sürüm oluşturulur ve eski sürüm "eski sürüm" olarak kayıtta kalır. Eğitmen geri
-bildirimi yöneticinin yeniden kullanım özetine düşer.
+Kendi paketini onaylamak engellidir; kendi uygulamasının raporunu onaylamak da
+öyle. Değişiklik istenen sürüm dondurulur, yeni sürüm oluşturulur ve eski sürüm
+"eski sürüm" olarak kayıtta kalır. Onaylanmış bir rapor yerinde düzenlenmez;
+yeni sürümle değiştirilir. Paylaşım kararı eğitmene aittir: yönetici, eğitmenin
+paylaşıma açmadığı bir raporu kütüphanede yayımlayamaz.
 
 ## Şu an çalışan kısım
 
@@ -111,17 +144,51 @@ Uçtan uca çalışan, herkese açık bir dikey dilim:
 - Bilim Türkiye'nin yayımlanmış atölye kataloğu: 7 tema × 3 yaş grubu × 183 konu
 - Onaylı içeriği olmayan katalog konuları için taslak öneri üretimi ve
   pedagog onayına giren içerik geliştirme akışı
-- Kaynak profili formu: süre, sınıf/grup mevcudu, bütçe, elektrik, internet,
-  malzeme ve erişilebilirlik
+**Tasarla**
+
+- Bilim Türkiye'nin yayımlanmış atölye kataloğu: 7 tema × 3 yaş grubu × 183 konu
+- Dört adımlı üretim sihirbazı: konu, mekân ve koşullar, malzeme, bütçe ve hazırlık
+- Merkez donanımı için üç durumlu model (var / yok / bilinmiyor); bilinmeyen
+  donanım yok sayılmaz, rota belirsiz olarak raporlanır
+- Her rota için gerekçeli aday listesi: doğrudan uygulanabilir, küçük
+  uyarlamayla uygulanabilir, belirsiz, uygulanamaz
+- Grup başına ve oturum toplamı malzeme listesi, maliyet, envanter miktarı
+  denetimi ve kesin bütçe kontrolü
 - Dil modeliyle canlı üretim (`APP_MODE=live`) ve deterministik yedek
-- Her çıktı için en az iki gerçek rota; reddedilen rotanın nedeni yazılır
-- Rota güvenlik kısıtları (ör. mercekle Güneş'e bakma yasağı) uyarı olarak eklenir
-- Grup başına ve sınıf toplamı malzeme listesi, maliyet ve envanter durumu
-- Öğrenme çıktısı–kanıt izlenebilirliği olan beş aşamalı 5E planı
-- Taslak → inceleme → onay → yayım → geri bildirim iş akışı
-- Değişmez sürüm geçmişi ve denetlenebilir durum geçişleri
-- Puan dağılımıyla oturum geri bildirimi ve yöneticiye yeniden kullanım özeti
+- Onaylı içeriği olmayan katalog konuları için pedagog onayına giren taslak öneri
+- Taslak → inceleme → onay → yayım iş akışı ve değişmez sürüm geçmişi
+
+**Uygula ve raporla**
+
+- Yalnızca yayımlanmış sürümden başlatılabilen uygulama kaydı
+- Uygulama başlarken dondurulan plan anlık görüntüsü; planlanan ve gerçekleşen
+  değerler yan yana, birbirinin üzerine yazılmadan
+- Aşama bazında uygulandı / değiştirildi / atlandı ve nedeni
+- Gerçek malzeme miktarları, alternatifler ve gerçekleşen maliyet
+- Yalnızca kaydedilen olgulardan yazılan yapay zekâ rapor taslağı
+- Rapor yaşam döngüsü: taslak → incelemede → değişiklik istendi → onaylandı →
+  kütüphanede, denetlenebilir geçişler ve rapor sürümleriyle
+
+**Paylaş ve uyarla**
+
+- Etkinlik kütüphanesi: sunucu tarafında filtreleme, sıralama ve sayfalama
+- Kütüphane kaydı yalnızca yayımlanmış kaynak, onaylanmış rapor ve eğitmenin
+  paylaşım izniyle oluşur; güvenlik olayı notları kütüphaneye aktarılmaz
+- "Merkezime uyarla": hedef merkezle kodla hesaplanmış uyum karşılaştırması ve
+  kaynağı değiştirmeyen bağımsız taslak
+- Uyarlama kökeni taslakta görünür: kaynak kayıt, uyarlayan kişi, karşılaştırma
+
+**Merkez ve envanter**
+
+- 30 Bilim Türkiye merkezi, yayımlanmış donanım bilgisiyle
+- Eğitmen ve yöneticinin donanım durumunu doğrulayabildiği operasyonel kayıt;
+  kaynak, doğrulayan kişi ve tarih saklanır
+- Dağıtım, kişinin doğruladığı bir kaydın üzerine yazmaz
+
+**Ortak**
+
 - Yazdırılabilir eğitmen paketi (öğretmen/öğrenci yönergeleri, malzeme tablosu)
+- Puan dağılımıyla oturum geri bildirimi ve yöneticiye yeniden kullanım özeti
 - Onay bekleyen kayıt akışı ve yönetici tarafından rol atama
 - Argon2id şifreleme, iptal edilebilir sunucu tabanlı oturumlar
 - HTTPS yayın, gerçek tarayıcı testleri ve erişilebilirlik denetimi
@@ -193,8 +260,8 @@ güçlü modele geçilebilir.
 ### Doğrulama
 
 ```bash
-npm run check      # lint + 446 birim testi + üretim derlemesi
-npm run check:all  # yukarısı + 39 tarayıcı testi
+npm run check      # lint + 547 birim testi + üretim derlemesi
+npm run check:all  # yukarısı + 57 tarayıcı testi
 ```
 
 Tarayıcı testleri Docker gerektirmez: gömülü PGlite üzerinde aynı PostgreSQL

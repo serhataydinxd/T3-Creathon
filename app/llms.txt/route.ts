@@ -28,9 +28,24 @@ merkezler aynı donanıma sahip değil: bazısında planetaryum, bazısında ser
 alanı var. Aynı atölye konusu, imkânı farklı merkezlerde uygulanmak zorunda.
 
 İMKÂN; süre, katılımcı sayısı, grup büyüklüğü, bütçe, elektrik, internet,
-merkez donanımı, eldeki malzeme ve erişilebilirlik ihtiyaçlarını girdi olarak
-alır, konuyu değiştirmeden o mekânda uygulanabilir bir oturum paketi üretir ve
-uygulanamayan rotanın nedenini yazar.
+merkez donanımı, eldeki malzeme ve miktarları, hazırlık süresi ve
+erişilebilirlik ihtiyaçlarını girdi olarak alır, konuyu değiştirmeden o mekânda
+uygulanabilir bir oturum paketi üretir ve her rotanın neden uygulanabilir,
+belirsiz veya uygulanamaz olduğunu yazar.
+
+Ürün burada bitmez: oturum uygulandıktan sonra ne olduğu kaydedilir, bu
+kayıttan bir rapor üretilir, onaylanan rapor etkinlik kütüphanesinde paylaşılır
+ve başka bir merkez onu kendi imkânlarına uyarlayabilir. Akış şudur:
+Tasarla → Uygula → Raporla → Paylaş → Başka merkeze uyarla.
+
+## Bilinmeyen donanım yok sayılmaz
+
+Merkez donanımı üç değerlidir: var, yok, bilinmiyor. Bir merkezin sayfasında
+bir donanımdan söz edilmemesi o donanımın olmadığı anlamına gelmez. Gereken
+donanımın durumu bilinmiyorsa rota elenmez, "bilgi eksikliği nedeniyle
+belirsiz" olarak raporlanır ve neyin doğrulanması gerektiği yazılır. Yalnızca
+bir kişinin yerinde doğruladığı yokluk bir rotayı eler; araştırma verisi
+"yok" üretemez.
 
 ## Yapay zekânın rolü ve sınırları
 
@@ -46,6 +61,15 @@ değiştiremez:
 - Rota uygunluğu: merkez donanımı, malzeme, format ve bütçe kontrolleri
 - Rota güvenlik kısıtları
 - Kilitli atölye konusu
+- Merkez donanımının üç durumlu değerlendirmesi ve rota adaylarının sırası
+- Planlanan ile gerçekleşen değerlerin ayrı tutulması
+- Hedef merkezle uyum karşılaştırması
+- Sürüm, durum geçişleri, yetki ve paylaşım kuralları
+
+Uygulama raporunda modelin işi daha da dardır: yalnızca eğitmenin kaydettiği
+olguları anlatır. Girilmemiş bir sayıyı uyduramaz, atlanmış bir aşamayı
+yapılmış gösteremez, gözlenmemiş bir öğrenmeyi gerçekleşmiş sayamaz ve bir
+güvenlik olayını gizleyemez. Kayıtta olmayan alan "Belirtilmedi" olarak kalır.
 
 Taslak kaydedilirken sunucu bu iskeleti sıfırdan yeniden üretir ve yalnızca
 sunucunun kendi ürettiği kayıttaki metni kullanır. Sağlayıcı yavaşlar, boş
@@ -67,6 +91,23 @@ bunu bir uyarı olarak bildirir.
 - 30 bilim merkezi, merkez sayfalarında yayımlanan donanımıyla. Yayımlanmamış
   donanım "yok" sayılmaz.
 - Dört eğitim formatı: okul grubu, tematik, uzun süreli ve çevrim içi.
+
+## Uygulama, rapor ve kütüphane
+
+- Uygulama kaydı yalnızca yayımlanmış bir sürümden başlatılır.
+- Kayıt başlarken plan dondurulur; planlanan ve gerçekleşen değerler ayrı
+  alanlarda tutulur ve birbirinin üzerine yazılmaz.
+- Rapor yaşam döngüsü: taslak → incelemede → değişiklik istendi → onaylandı →
+  kütüphanede yayımlandı. Onaylanmış rapor yerinde düzenlenmez, yeni sürümle
+  değiştirilir.
+- Eğitmen kendi uygulamasının raporunu pedagojik olarak onaylayamaz.
+- Kütüphaneye giriş dört koşula bağlıdır: kaynak yayımlanmış, rapor onaylanmış,
+  eğitmen paylaşıma izin vermiş ve kayıt kişisel veriden arındırılmış.
+- Güvenlik olayı notları ve bireysel gereksinim açıklamaları kütüphaneye
+  aktarılmaz; merkez içi raporda kalır.
+- "Merkezime uyarla" kaynağı değiştirmez: bağımsız bir taslak oluşturur, konuyu
+  korur ve kökenini kaydeder.
+- Çocuklara ait kişisel veri toplanmaz; katılım bilgisi yalnızca toplu sayıdır.
 
 ## Pedagoji ve müfredat ilişkisi
 

@@ -52,16 +52,28 @@ Next.js web/PWA
 ## Module boundaries
 
 ```text
-curriculum -> authoring -> review -> delivery
+content -> authoring -> review -> delivery -> library -> adaptation
 ```
 
-- `curriculum` owns objectives, pedagogy models and approved templates.
-- `authoring` owns requests, generation runs, stages and assembly.
+- `content` owns the published Bilim Türkiye catalogue, topics, formats,
+  materials and centres. Static research lives here; operational centre data
+  lives in the database beside it.
+- `authoring` owns requests, generation runs, route candidates and assembly.
 - `review` owns versions, change requests and approval.
-- `delivery` exposes only approved packages, print views and feedback.
+- `delivery` owns delivery records, their frozen plan snapshots, observations
+  and report versions. It exposes only published packages.
+- `library` owns published entries, their filters and their visibility.
+- `adaptation` reads a library entry and writes a new draft. It never writes to
+  anything upstream of it.
 
 Modules may depend only toward the right. Delivery must never read an
-unapproved draft as if it were published.
+unapproved draft as if it were published, and adaptation must never modify the
+source it came from.
+
+Two cycles were broken deliberately: costing lives in its own module so
+`generator` and `candidates` do not import each other's values, and the
+compatibility preview is separate from the adaptation action so a page can show
+the comparison without creating anything.
 
 ## Suggested folder structure
 
@@ -182,6 +194,41 @@ draft
           -> published
           -> superseded
 ```
+
+### Delivery report
+
+Deliberately the same shape, so a reviewer learns one set of rules:
+
+```text
+draft
+  -> submitted
+      -> changes_requested
+      -> approved
+          -> published        (visible in the activity library)
+          -> superseded
+```
+
+An approved report is never edited. A correction supersedes it with a new
+version, so what a pedagogue signed stays readable exactly as they signed it.
+Publication is a separate decision from approval and is held by the manager:
+approval says the account is accurate, publication says it may be shared — and
+it requires the educator to have granted permission.
+
+## Facility status
+
+A centre facility carries three states, and every consumer must handle the
+third:
+
+```text
+available     published or verified present
+unavailable   verified absent by a person who checked
+unknown       nobody has established either way (the default)
+```
+
+Research data may only ever produce `available` or `unknown`. A route needing
+an `unknown` facility is reported uncertain, never rejected. Route selection
+passes over an uncertain route for delivery but keeps it on the plan with what
+would have to be checked.
 
 ## Queue correctness
 

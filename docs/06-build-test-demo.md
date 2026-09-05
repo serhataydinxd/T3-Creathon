@@ -24,7 +24,7 @@
 | 4–10 | Provider interface, structured schemas and replay fixtures | Fall back to validated JSON if provider-specific strict output blocks progress |
 | 10–18 | Run/stage state machine, worker leases, reaper and events | Ship polling before SSE |
 | 18–24 | Constraint, inventory and safety engine | Never defer always-hard safety checks |
-| 24–30 | Kazanım Kilidi, editing and approval UI | Use a plain mapping/diff table if needed |
+| 24–30 | Konu Kilidi, editing and approval UI | Use a plain mapping/diff table if needed |
 | 30–36 | Print view and one polished game renderer | Cap print work at six hours |
 | 36–42 | Complete seeds and demo fixtures | Twelve objectives and six activities are the minimum floor |
 | 42–46 | Integration tests and rehearsals | Nothing untested after hour 44 enters the live path |
@@ -41,7 +41,7 @@
 Do not cut:
 
 - Any mandatory Problem 3 requirement
-- Kazanım Kilidi
+- Konu Kilidi
 - Pedagogical approval
 - Safety and constraint validation
 - Replay mode
@@ -138,19 +138,45 @@ Adversarial fixtures must include:
 - Provider timeout
 - Worker crash after claim
 
-## Three-minute demo
+## Demo script
 
-1. Select workshop domain, objective, age and 5E model.
-2. Enter constraints: no circuit kit, no projector, 30 students, 40 minutes,
-   paper/classroom stationery only.
-3. Generate and show real durable progress events.
-4. Show a resource-compatible plan and printable circuit game.
-5. Open Kazanım Kilidi and inspect objective-stage-mechanism-evidence links.
-6. Have the pedagogue request one targeted change and approve the revision.
-7. Open the approved educator view and print package.
+Runs entirely on authored content. The unauthored-topic path is shown
+separately, as an honest secondary demo — leading with it would present a
+draft proposal where a jury expects approved content.
 
-The strongest AI demonstration is a side-by-side generation of the same
-objective with two different resource profiles.
+1. **Konu.** Astronomi, Havacılık ve Uzay · 12-14 yaş · catalogue topic
+   *Uzay Teknolojileri*, which İMKÂN has authored as *Uzay Gözlem Araçları:
+   Kendi Modelini Kur*. The lock badge reads "uzman doğrulaması bekliyor",
+   because no human has checked the curriculum mapping and the product says so.
+2. **Mekân.** Choose Bilim Trabzon, whose page publishes an 80-seat 12 m dome.
+   The planetarium route is directly deliverable and the candidate list says
+   why.
+3. **Aynı konu, başka merkez.** Switch to Bilim Çorum, which publishes nothing
+   about a dome. The route is **not** rejected: it becomes "bilgi eksikliği
+   nedeniyle belirsiz", with what to verify. This is the sharpest moment in the
+   demo — most systems would silently say no.
+4. **Doğrulama.** As an educator, open Merkez ve envanter and record that Çorum
+   has no planetarium. The verification is stored with the person and the date.
+   Return to the lab: the same route is now "uygulanamaz", for a different and
+   better reason, and the classroom route is offered instead.
+5. **Üret ve yayımla.** Generate, save, submit; pedagogue approves; manager
+   publishes.
+6. **Uygula.** As the educator, start a delivery from the published version.
+   Record 21 participants against the planned 24, 55 minutes against 60, and
+   one stage skipped for lack of time. Planned and actual sit side by side.
+7. **Raporla.** Draft the report. It states both figures, names the skipped
+   stage with its reason, and — because no evidence was observed — says
+   explicitly that learning cannot be claimed. Submit it; note that the
+   educator cannot approve their own account.
+8. **Onayla ve paylaş.** Pedagogue approves, educator's sharing permission is
+   already granted, manager publishes to the library.
+9. **Uyarla.** From the library entry, pick another centre and read the
+   computed compatibility, then create the draft. The source package and its
+   report are unchanged; the new draft carries its origin and must be reviewed
+   like any other.
+
+The strongest single moment is step 3 into step 4: unknown is treated as
+unknown, and a person resolving it changes the answer.
 
 ## Demo resilience
 
@@ -172,7 +198,12 @@ objective with two different resource profiles.
 - [ ] Hard-budget behavior verified
 - [ ] Worker lease recovery verified
 - [ ] Turkish print output verified
-- [ ] Kazanım Kilidi and superseded-version behavior shown
+- [ ] Konu Kilidi and superseded-version behavior shown
+- [ ] Unknown-facility route shown as uncertain, then resolved by verification
+- [ ] Planned-versus-actual figures both visible on the report
+- [ ] Self-approval refused for a report
+- [ ] Safety note absent from the library entry
+- [ ] Adaptation leaves the source package published and unchanged
 - [ ] Token, cost and latency metrics visible
 - [ ] Backup recording locally available
 

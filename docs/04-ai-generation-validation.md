@@ -151,17 +151,39 @@ Keep the stable prefix first for provider caching:
 User-controlled text must be placed in explicit data delimiters and described
 as untrusted context, not instructions.
 
-## Kazanım Kilidi invariants
+## Konu Kilidi invariants
 
-- Approved objectives are immutable.
-- Objective revisions create new rows and supersede old rows.
-- A run pins objective ID, curriculum version and content hash.
-- Output objective IDs must be a subset of the run's pinned IDs.
-- Every activity and game must contain at least one objective reference.
-- The official objective displayed in the UI and export always comes from the
-  database snapshot.
+- The workshop topic is immutable for the life of a generation.
+- Topics live in their own table, separate from curriculum outcomes. A topic is
+  the product's identity; an outcome is an optional mapping onto it.
+- A curriculum mapping carries its own verification state. Unverified mappings
+  are never displayed as approved — the lock badge reads the recorded state,
+  and "locked" has never meant "checked".
+- A run pins the topic row, the plan snapshot and a content hash.
+- The topic displayed in the UI and export always comes from the database
+  snapshot, never from model output.
+- For a catalogue topic with no authored session, the model may write the
+  session but may not rename the workshop: the published title is the lock.
 - Generated student-friendly explanations may paraphrase the concept but may
-  not become the canonical objective.
+  not become the canonical topic or outcome text.
+
+## Delivery report invariants
+
+The report is a second AI surface with a narrower contract than generation.
+
+- The model receives only what the educator recorded, with unanswered fields
+  already marked "Belirtilmedi", and narrates it.
+- It may not invent a participant count, duration or cost; describe a skipped
+  stage as delivered; assert unobserved learning; or soften an incident.
+- Empty output in any section is rejected as a contract breach.
+- The deterministic fallback is not a degraded guess: the facts are already
+  written down, so it restates them plainly. A report is never blocked on a
+  provider.
+- Safety observations occupy their own narrative section, which the public
+  library never renders. The public section list is an allow-list, so a
+  section added later is private until someone decides otherwise.
+- An edited report is the educator's text, and its recorded provenance stops
+  being the model's.
 
 ## Activity safety
 
