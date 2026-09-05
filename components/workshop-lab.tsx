@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { MaterialLedger } from "@/components/material-ledger";
 import { planContext } from "@/components/plan-context";
+import { ObjectiveLockBadge } from "@/components/objective-lock-badge";
+import { RouteDecisions } from "@/components/route-decisions";
 import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
 import { INVENTORY_PRESETS, INVENTORY_PRESET_IDS, MATERIAL_OPTIONS } from "@/server/content/materials";
 import {
@@ -42,7 +44,8 @@ import {
   VENUE_CAPABILITIES,
   VENUE_CAPABILITY_IDS,
   confirmedCapabilities,
-  unpublishedCapabilities,
+  unavailableCapabilities,
+  unknownCapabilities,
   type CentreId,
 } from "@/server/content/venues";
 import { FORMATS, FORMAT_IDS, getFormat } from "@/server/content/formats";
@@ -51,6 +54,19 @@ import type { AgeCohortId, WorkshopDomainId } from "@/server/content/domains";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
 type View = "configure" | "generating" | "result";
+
+type CapabilityChoice = "available" | "unavailable" | "unknown";
+
+/**
+ * The three answers, in the order a trainer thinks in. "Bilinmiyor" is offered
+ * explicitly and is the default, so leaving it is a recorded answer rather
+ * than an omission the system reads as "no".
+ */
+const CAPABILITY_CHOICES: readonly { value: CapabilityChoice; label: string }[] = [
+  { value: "available", label: "Var" },
+  { value: "unavailable", label: "Yok" },
+  { value: "unknown", label: "Bilinmiyor" },
+];
 
 export function WorkshopLab({ live = false }: { live?: boolean }) {
   const router = useRouter();
@@ -101,6 +117,32 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
 
   function update<K extends keyof ResourceProfile>(key: K, value: ResourceProfile[K]) {
     setProfile((current) => ({ ...current, [key]: value }));
+  }
+
+  /**
+   * A facility's status as the profile records it. Absent from both lists is
+   * not "no" — it is the honest third answer, and it is the default.
+   */
+  function capabilityStatus(current: ResourceProfile, capability: string): CapabilityChoice {
+    if ((current.capabilities ?? []).includes(capability)) return "available";
+    if ((current.unavailableCapabilities ?? []).includes(capability)) return "unavailable";
+    return "unknown";
+  }
+
+  function setCapabilityStatus(capability: string, status: CapabilityChoice) {
+    setProfile((current) => ({
+      ...current,
+      // Removed from both lists first, so a facility can never end up asserted
+      // as present and absent at once — which the request schema also refuses.
+      capabilities: [
+        ...(current.capabilities ?? []).filter((item) => item !== capability),
+        ...(status === "available" ? [capability] : []),
+      ],
+      unavailableCapabilities: [
+        ...(current.unavailableCapabilities ?? []).filter((item) => item !== capability),
+        ...(status === "unavailable" ? [capability] : []),
+      ],
+    }));
   }
 
   function toggleMaterial(key: MaterialKey) {
@@ -317,10 +359,20 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
                 onChange={(event) => {
                   const value = event.target.value;
                   setVenueId(value);
-                  update(
-                    "capabilities",
-                    value === "school" ? [...SCHOOL_CLASSROOM.capabilities] : confirmedCapabilities(value as CentreId),
-                  );
+                  // Only what the source actually establishes. A centre's
+                  // unpublished facility stays unknown; a school classroom's
+                  // absence of one is a verified fact about school classrooms.
+                  setProfile((current) => ({
+                    ...current,
+                    capabilities:
+                      value === "school"
+                        ? [...SCHOOL_CLASSROOM.capabilities]
+                        : confirmedCapabilities(value as CentreId),
+                    unavailableCapabilities:
+                      value === "school"
+                        ? [...SCHOOL_CLASSROOM.unavailableCapabilities]
+                        : unavailableCapabilities(value as CentreId),
+                  }));
                 }}
               >
                 <option value="school">{SCHOOL_CLASSROOM.label}</option>
@@ -332,41 +384,50 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
                   ))}
                 </optgroup>
               </select>
-              {venueId !== "school" && unpublishedCapabilities(venueId as CentreId).length > 0 && (
+              {venueId !== "school" && unknownCapabilities(venueId as CentreId).length > 0 && (
                 <p className="panel-help" data-testid="unpublished-note">
-                  Bu merkez için yayımlanmamış donanım:{" "}
-                  {unpublishedCapabilities(venueId as CentreId)
+                  Bu merkez için donanım durumu bilinmiyor:{" "}
+                  {unknownCapabilities(venueId as CentreId)
                     .map((capability) => VENUE_CAPABILITIES[capability].label)
                     .join(", ")}
-                  . Yayımlanmamış olması yok anlamına gelmez; merkezde varsa aşağıdan işaretleyin.
+                  . Bilinmemesi yok anlamına gelmez; aşağıdan &quot;Var&quot; ya da
+                  &quot;Yok&quot; olarak doğrulayabilirsiniz.
                 </p>
               )}
-              <div className="material-grid">
+              <div className="capability-grid">
                 {VENUE_CAPABILITY_IDS.map((capability) => {
-                  const present = (profile.capabilities ?? []).includes(capability);
+                  const status = capabilityStatus(profile, capability);
                   return (
-                    <button
-                      key={capability}
-                      type="button"
-                      data-testid={`capability-${capability}`}
-                      aria-pressed={present}
-                      title={VENUE_CAPABILITIES[capability].description}
-                      className={present ? "material selected" : "material"}
-                      onClick={() =>
-                        update(
-                          "capabilities",
-                          present
-                            ? (profile.capabilities ?? []).filter((item) => item !== capability)
-                            : [...(profile.capabilities ?? []), capability],
-                        )
-                      }
-                    >
-                      <i>{present && <Check />}</i>
-                      {VENUE_CAPABILITIES[capability].label}
-                    </button>
+                    <div className="capability" key={capability}>
+                      <span title={VENUE_CAPABILITIES[capability].description}>
+                        {VENUE_CAPABILITIES[capability].label}
+                      </span>
+                      <div
+                        className="capability-choice"
+                        role="group"
+                        aria-label={`${VENUE_CAPABILITIES[capability].label} durumu`}
+                      >
+                        {CAPABILITY_CHOICES.map((choice) => (
+                          <button
+                            key={choice.value}
+                            type="button"
+                            data-testid={`capability-${capability}-${choice.value}`}
+                            aria-pressed={status === choice.value}
+                            className={status === choice.value ? "chip selected" : "chip"}
+                            onClick={() => setCapabilityStatus(capability, choice.value)}
+                          >
+                            {choice.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
+              <p className="panel-help">
+                &quot;Bilinmiyor&quot; bir yanıttır: donanım gerektiren rota elenmez, belirsiz
+                olarak raporlanır.
+              </p>
               <div className="budget-row">
                 <label><span>Toplam bütçe</span><div className="input-affix"><input type="number" min="0" value={profile.budgetTry} onChange={(event) => update("budgetTry", Number(event.target.value))} /><b>₺</b></div></label>
                 <label className="check-label"><input type="checkbox" checked={profile.hardBudget} onChange={(event) => update("hardBudget", event.target.checked)} /><span><strong>Kesin bütçe sınırı</strong><small>Aşım olursa üretimi durdur</small></span></label>
@@ -484,11 +545,7 @@ function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving
       <section className="objective-lock-card" data-testid="objective-lock">
         <div className="lock-symbol"><LockKeyhole /></div>
         <div><span className="overline">Konu Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div>
-        {plan.topicStatus === "proposal" ? (
-          <span className="verified pending"><CircleAlert /> Taslak öneri</span>
-        ) : (
-          <span className="verified"><ShieldCheck /> Doğrulandı</span>
-        )}
+<ObjectiveLockBadge plan={plan} />
       </section>
 
       <div className="plan-grid">
@@ -517,6 +574,7 @@ function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving
             <div>{safetyBlocked ? <CircleAlert /> : <CheckCircle2 />}<span><strong>Güvenlik sınırları</strong><small>{safetyBlocked ? "İnceleme gerekli" : "İhlal yok"}</small></span></div>
           </div>
           {plan.findings.map((finding, index) => <div data-testid="finding" data-code={finding.code} data-severity={finding.severity} className={`finding ${finding.severity}`} key={`${finding.code}-${index}`}>{finding.severity === "warning" || finding.severity === "blocker" ? <CircleAlert /> : <Sparkles />}<div><strong>{finding.code.replaceAll("_", " ")}</strong><p>{finding.message}</p></div></div>)}
+          <RouteDecisions plan={plan} />
           <details><summary>Doğrulama kaydı <ChevronDown /></summary><code>OBJECTIVE_COVERAGE: {coveredStages === plan.stages.length ? "PASS" : "BLOCK"}<br />DURATION_TOTAL: {plan.stages.reduce((sum, item) => sum + item.minutes, 0) === plan.profile.durationMinutes ? "PASS" : "BLOCK"}<br />SAFETY_BOUNDS: {safetyBlocked ? "BLOCK" : "PASS"}<br />INVENTORY: {plan.findings.some((finding) => finding.code === "APPROVED_SUBSTITUTION_APPLIED") ? "ADAPTED" : "PASS"}</code></details>
         </aside>
       </div>

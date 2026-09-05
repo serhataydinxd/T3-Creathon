@@ -31,6 +31,16 @@ export const resourceProfileSchema = z.object({
     .max(VENUE_CAPABILITY_IDS.length)
     .refine((items) => new Set(items).size === items.length, "Donanım tekrarlanamaz.")
     .default([]),
+  /**
+   * Facilities verified as absent. Defaulted to empty rather than required, so
+   * an older profile still parses — and so a facility nobody has ruled on stays
+   * unknown instead of being read as missing.
+   */
+  unavailableCapabilities: z
+    .array(z.enum(VENUE_CAPABILITY_IDS))
+    .max(VENUE_CAPABILITY_IDS.length)
+    .refine((items) => new Set(items).size === items.length, "Donanım tekrarlanamaz.")
+    .default([]),
   formatId: z.enum(FORMAT_IDS).default(DEFAULT_FORMAT_ID),
   /**
    * A published catalogue topic with no authored session, to be drafted.
@@ -45,7 +55,19 @@ export const resourceProfileSchema = z.object({
     .string()
     .refine(isCatalogueEntryId, "Bilinmeyen katalog konusu.")
     .optional(),
-});
+})
+  /**
+   * A facility cannot be both verified present and verified absent. Rejected
+   * at the edge rather than resolved by precedence, because either resolution
+   * would silently discard something a person actually asserted.
+   */
+  .refine(
+    (profile) =>
+      !profile.capabilities.some((capability) =>
+        profile.unavailableCapabilities.includes(capability),
+      ),
+    "Bir donanım hem var hem yok olarak işaretlenemez.",
+  );
 
 /**
  * A draft names the generation the server issued; it never carries prose.

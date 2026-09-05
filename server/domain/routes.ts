@@ -12,80 +12,122 @@ import {
 import { MATERIALS } from "@/server/content/materials";
 import { VENUE_CAPABILITIES } from "@/server/content/venues";
 import { getFormat } from "@/server/content/formats";
-import type { ResourceProfile, RouteRejection, Stage } from "./types";
+import type { ResourceProfile, RouteRejection, RouteUncertainty, Stage } from "./types";
 
 /**
- * Why a route could not be offered, in the teacher's terms. Returned rather
- * than discarded so the interface can explain the adaptation instead of
- * presenting one plan as if it were the only possibility.
+ * Whether a route can be offered, ruled out, or neither.
  *
- * Only the first failing condition is reported, and the order is deliberate:
- * power, connectivity, then fixed venue facilities, then stock. A trainer can
- * buy a lens before the next session but cannot build a planetarium, so the
- * less fixable blocker is the more useful thing to say.
+ * Three verdicts rather than two, because a venue facility has three states.
+ * Treating "nobody recorded whether this centre has a dome" as "this centre
+ * has no dome" discards a route on the strength of missing paperwork, which is
+ * exactly the judgement the product exists to avoid making silently.
+ *
+ * Definite failures are checked before unknowns: a route that also needs
+ * electricity the room does not have is blocked whatever the dome's status, and
+ * saying so is more useful than asking someone to go and check a facility that
+ * would not have helped.
+ *
+ * Within the definite failures the order is deliberate — power, connectivity,
+ * format, verified-absent facilities, then stock. A trainer can buy a lens
+ * before the next session but cannot build a planetarium, so the less fixable
+ * blocker is the more useful thing to say.
+ */
+export type RouteVerdict =
+  | { status: "eligible" }
+  | { status: "blocked"; rejection: RouteRejection }
+  | { status: "uncertain"; uncertainty: RouteUncertainty };
+
+export function evaluateRoute(route: RouteDefinition, profile: ResourceProfile): RouteVerdict {
+  const { eligibility } = route;
+  const blocked = (code: RouteRejection["code"], reason: string): RouteVerdict => ({
+    status: "blocked",
+    rejection: { routeId: route.id, routeName: route.name, code, reason },
+  });
+
+  if (eligibility.requiresElectricity && !profile.hasElectricity) {
+    return blocked("NO_ELECTRICITY", "Sınıfta elektrik bulunmadığı için bu rota uygulanamaz.");
+  }
+  if (eligibility.requiresInternet && !profile.hasInternet) {
+    return blocked("NO_INTERNET", "Sınıfta internet bulunmadığı için bu rota uygulanamaz.");
+  }
+  const format = getFormat(profile.formatId);
+  const required = eligibility.requiredCapabilities ?? [];
+  if (!format.allowsVenueCapabilities && required.length > 0) {
+    return blocked("NOT_IN_FORMAT", `${format.label} formatında merkez donanımı kullanılamaz.`);
+  }
+
+  const present = profile.capabilities ?? [];
+  // Presence wins if a profile somehow asserts both. The request schema
+  // rejects that contradiction at the edge, so reaching here means malformed
+  // input, and of the two readings only this one avoids discarding a route on
+  // the strength of a claim the same profile contradicts.
+  const verifiedAbsent = (profile.unavailableCapabilities ?? []).filter(
+    (capability) => !present.includes(capability),
+  );
+  const missing = required.filter((capability) => verifiedAbsent.includes(capability));
+  if (missing.length > 0) {
+    return blocked(
+      "MISSING_CAPABILITY",
+      `Mekânda gereken donanım yok: ${missing
+        .map((capability) => VENUE_CAPABILITIES[capability].label)
+        .join(", ")}.`,
+    );
+  }
+
+  const missingMaterials = (eligibility.requiredMaterials ?? []).filter(
+    (materialId) => !profile.materials.includes(materialId),
+  );
+  if (missingMaterials.length > 0) {
+    return blocked(
+      "MISSING_MATERIALS",
+      `Gerekli malzemeler envanterde yok: ${missingMaterials
+        .map((materialId) => MATERIALS[materialId].label)
+        .join(", ")}.`,
+    );
+  }
+
+  // Nothing rules the route out. It can still only be offered if every facility
+  // it needs is confirmed present; anything unrecorded leaves it unsettled.
+  const unknown = required.filter(
+    (capability) => !present.includes(capability) && !verifiedAbsent.includes(capability),
+  );
+  if (unknown.length > 0) {
+    const labels = unknown.map((capability) => VENUE_CAPABILITIES[capability].label).join(", ");
+    return {
+      status: "uncertain",
+      uncertainty: {
+        routeId: route.id,
+        routeName: route.name,
+        code: "CAPABILITY_UNKNOWN",
+        unknownCapabilities: [...unknown],
+        reason: `Bu rota için gereken donanımın durumu bilinmiyor: ${labels}. Yok sayılmadı; merkezde varsa işaretleyin, yoksa yok olarak doğrulayın.`,
+      },
+    };
+  }
+  return { status: "eligible" };
+}
+
+/**
+ * Kept as the older boolean-shaped answer for callers that only need to know
+ * whether a route is ruled out. An uncertain route is not a rejection, so it
+ * reports null here — the caller that cares must read the verdict.
  */
 export function evaluateEligibility(
   route: RouteDefinition,
   profile: ResourceProfile,
 ): RouteRejection | null {
-  const { eligibility } = route;
-  if (eligibility.requiresElectricity && !profile.hasElectricity) {
-    return {
-      routeId: route.id,
-      routeName: route.name,
-      code: "NO_ELECTRICITY",
-      reason: "Sınıfta elektrik bulunmadığı için bu rota uygulanamaz.",
-    };
-  }
-  if (eligibility.requiresInternet && !profile.hasInternet) {
-    return {
-      routeId: route.id,
-      routeName: route.name,
-      code: "NO_INTERNET",
-      reason: "Sınıfta internet bulunmadığı için bu rota uygulanamaz.",
-    };
-  }
-  const format = getFormat(profile.formatId);
-  if (!format.allowsVenueCapabilities && (eligibility.requiredCapabilities ?? []).length > 0) {
-    return {
-      routeId: route.id,
-      routeName: route.name,
-      code: "NOT_IN_FORMAT",
-      reason: `${format.label} formatında merkez donanımı kullanılamaz.`,
-    };
-  }
-  const missingCapabilities = (eligibility.requiredCapabilities ?? []).filter(
-    (capability) => !(profile.capabilities ?? []).includes(capability),
-  );
-  if (missingCapabilities.length > 0) {
-    return {
-      routeId: route.id,
-      routeName: route.name,
-      code: "MISSING_CAPABILITY",
-      reason: `Mekânda gereken donanım yok: ${missingCapabilities
-        .map((capability) => VENUE_CAPABILITIES[capability].label)
-        .join(", ")}.`,
-    };
-  }
-  const missing = (eligibility.requiredMaterials ?? []).filter(
-    (materialId) => !profile.materials.includes(materialId),
-  );
-  if (missing.length > 0) {
-    return {
-      routeId: route.id,
-      routeName: route.name,
-      code: "MISSING_MATERIALS",
-      reason: `Gerekli malzemeler envanterde yok: ${missing
-        .map((materialId) => MATERIALS[materialId].label)
-        .join(", ")}.`,
-    };
-  }
-  return null;
+  const verdict = evaluateRoute(route, profile);
+  return verdict.status === "blocked" ? verdict.rejection : null;
 }
 
 export type RouteSelection = {
   route: RouteDefinition;
   rejected: RouteRejection[];
+  /**
+   * Routes left unsettled by unknown facility status. Reported rather than
+   * chosen: selecting one would amount to assuming the dome is there.
+   */
+  uncertain: RouteUncertainty[];
 };
 
 /**
@@ -110,13 +152,20 @@ export function selectRouteForTopic(
     (a, b) => ROUTE_TIER_ORDER.indexOf(a.tier) - ROUTE_TIER_ORDER.indexOf(b.tier),
   );
   const rejected: RouteRejection[] = [];
+  const uncertain: RouteUncertainty[] = [];
   for (const route of routes) {
-    const rejection = evaluateEligibility(route, profile);
-    if (rejection) {
-      rejected.push(rejection);
+    const verdict = evaluateRoute(route, profile);
+    if (verdict.status === "blocked") {
+      rejected.push(verdict.rejection);
       continue;
     }
-    return { route, rejected };
+    // An unconfirmed route is passed over for delivery but kept on the record,
+    // so the plan can say what would have to be checked to unlock it.
+    if (verdict.status === "uncertain") {
+      uncertain.push(verdict.uncertainty);
+      continue;
+    }
+    return { route, rejected, uncertain };
   }
   throw new Error(`NO_ELIGIBLE_ROUTE:${topic.catalogueEntryId ?? topic.title}`);
 }

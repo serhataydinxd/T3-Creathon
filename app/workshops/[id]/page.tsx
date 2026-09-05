@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CheckCircle2, CircleAlert, Clock3, LockKeyhole, ShieldCheck, Star, Users } from "lucide-react";
+import { CheckCircle2, Clock3, LockKeyhole, ShieldCheck, Star, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { createRevisionAction, feedbackAction, reviewWorkshopAction, submitWorkshopAction } from "@/app/actions/workshops";
 import { publishWorkshopAction } from "@/app/actions/manager";
@@ -8,6 +8,8 @@ import { requireUser } from "@/server/auth/session";
 import { getFeedbackSummary, getReviews, getWorkshop } from "@/server/domain/workshops";
 import { MaterialLedger } from "@/components/material-ledger";
 import { planContext } from "@/components/plan-context";
+import { ObjectiveLockBadge } from "@/components/objective-lock-badge";
+import { RouteDecisions } from "@/components/route-decisions";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -43,9 +45,10 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
           <div><span className="overline">{planContext(plan)} · Sürüm {workshop.version}</span><h1>{workshop.title}</h1><p>{plan.adaptationSummary}</p></div>
           <div className="header-tags"><span data-testid="plan-mode" data-mode={plan.mode} className={`mode-tag ${plan.mode === "LIVE" ? "live" : "replay"}`}>{plan.mode === "LIVE" ? "CANLI ÜRETİM" : "REPLAY"}</span><span data-testid="workflow-status" data-status={workshop.status} className={`workflow-status ${workshop.status}`}>{statusLabels[workshop.status]}</span></div>
         </header>
-        <section className="objective-lock-card"><div className="lock-symbol"><LockKeyhole /></div><div><span className="overline">Konu Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div>{plan.topicStatus === "proposal" ? <span className="verified pending"><CircleAlert /> Taslak öneri</span> : <span className="verified"><ShieldCheck /> Doğrulandı</span>}</section>
+        <section className="objective-lock-card"><div className="lock-symbol"><LockKeyhole /></div><div><span className="overline">Konu Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div><ObjectiveLockBadge plan={plan} /></section>
         <div className="package-meta"><span><Clock3 /> {plan.profile.durationMinutes} dakika</span><span><Users /> {plan.profile.classSize} öğrenci · {plan.groupCount} grup</span><span><ShieldCheck /> {plan.findings.filter((finding) => finding.severity === "blocker").length} bloker</span></div>
         {plan.materialPlan && <MaterialLedger plan={plan} />}
+        <RouteDecisions plan={plan} />
         <div className="persisted-grid">
           <div className="package-stages">
             {plan.stages.map((stage, index) => <article key={stage.key}><div className="package-stage-title"><span>0{index + 1}</span><div><small>{stage.name} · {stage.minutes} dk</small><h2>{stage.title}</h2></div></div><div className="package-columns"><p><b>Eğitmen</b>{stage.teacherAction}</p><p><b>Öğrenci</b>{stage.studentAction}</p></div><div className="trace-line"><LockKeyhole /><div><strong>Konu bağlantısı</strong><p>{stage.objectiveConnection}</p></div></div><div className="evidence-box"><ShieldCheck /><div><strong>Öğrenme kanıtı</strong><p>{stage.evidence}</p></div></div></article>)}

@@ -10,6 +10,7 @@ import { buildProposalTopic, proposalSource } from "@/server/content/proposals";
 import { MATERIALS, MATERIALS_PRICED_ON } from "@/server/content/materials";
 import { WORKSHOP_DOMAINS } from "@/server/content/domains";
 import { DEFAULT_FORMAT_ID, getFormat } from "@/server/content/formats";
+import { SCHOOL_CLASSROOM } from "@/server/content/venues";
 import { buildStagesForTopic, selectRouteForTopic } from "./routes";
 import type { Finding, MaterialLine, ResourceProfile, WorkshopPlan } from "./types";
 
@@ -96,7 +97,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
 
   const format = getFormat(profile.formatId);
   const { topic: content, status: topicStatus, outcomeId } = resolveTopic(profile);
-  const { route, rejected } = selectRouteForTopic(content, profile);
+  const { route, rejected, uncertain } = selectRouteForTopic(content, profile);
   const stages = buildStagesForTopic(content, route, profile);
   const groupCount = Math.ceil(profile.classSize / profile.groupSize);
 
@@ -174,6 +175,16 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
       message: route.substitutionNote,
     });
   }
+  // Missing information, reported as missing information. A route left
+  // unsettled must never be summarised as unavailable, and the finding names
+  // what to check so the gap is actionable rather than merely disclosed.
+  for (const unsettled of uncertain) {
+    findings.push({
+      code: "CAPABILITY_STATUS_UNKNOWN",
+      severity: "warning",
+      message: `${unsettled.routeName}: ${unsettled.reason}`,
+    });
+  }
   for (const note of route.safetyNotes ?? []) {
     findings.push({ code: "SAFETY_CONSTRAINT", severity: "warning", message: note });
   }
@@ -217,6 +228,12 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
           ? proposalSource(content.catalogueEntryId)
           : content.curriculumMapping?.source.document ?? "Bilim Türkiye atölye programı",
       locked: true,
+      // Stamped from the corpus rather than assumed. A lock is about
+      // immutability; saying "doğrulandı" is a claim about a person having
+      // checked, and none of the corpus mappings have been checked yet.
+      verification: content.curriculumMapping
+        ? content.curriculumMapping.verification
+        : ("none" as const),
     },
     profile,
     outcomeId: outcomeId ?? undefined,
@@ -229,6 +246,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     routeName: route.name,
     routeTier: route.tier,
     rejectedRoutes: rejected,
+    uncertainRoutes: uncertain,
     generatorVersion: GENERATOR_VERSION,
     groupCount,
     estimatedCostTry,
@@ -250,6 +268,9 @@ export const DEFAULT_PROFILE: ResourceProfile = {
   hasInternet: false,
   hasElectricity: false,
   materials: ["paper", "pencil", "scissors", "tape", "tissue"],
+  // A school classroom verifiably has no centre facilities, so the default
+  // profile states that rather than leaving three unknowns for the trainer.
+  unavailableCapabilities: [...SCHOOL_CLASSROOM.unavailableCapabilities],
   accessibilityNeeds: ["Yüksek kontrastlı basılı materyal"],
   outcomeId: DEFAULT_OUTCOME_ID,
   formatId: DEFAULT_FORMAT_ID,

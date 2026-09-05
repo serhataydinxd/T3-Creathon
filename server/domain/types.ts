@@ -23,11 +23,20 @@ export type ResourceProfile = {
    */
   outcomeId?: string;
   /**
-   * Fixed facilities the venue offers. Optional in the type because profiles
-   * captured before venues were modelled carry none; the request schema
-   * defaults it so generate and save always hash identically.
+   * Fixed facilities verified as present at the venue. Optional in the type
+   * because profiles captured before venues were modelled carry none; the
+   * request schema defaults it so generate and save always hash identically.
    */
   capabilities?: string[];
+  /**
+   * Facilities verified as *absent* by someone who checked.
+   *
+   * Separate from `capabilities` rather than folded into a status map so an
+   * older profile keeps parsing unchanged — and, more importantly, so it keeps
+   * meaning what it meant. A facility in neither list is `unknown`, which is
+   * the honest reading of a profile captured before anyone could say.
+   */
+  unavailableCapabilities?: string[];
   /** Which Bilim Türkiye education format the session is delivered under. */
   formatId?: string;
   /**
@@ -44,6 +53,24 @@ export type RouteRejection = {
   routeId: string;
   routeName: string;
   code: "NO_ELECTRICITY" | "NO_INTERNET" | "MISSING_MATERIALS" | "MISSING_CAPABILITY" | "NOT_IN_FORMAT";
+  reason: string;
+};
+
+/**
+ * A route that is not ruled out, but cannot be confirmed either.
+ *
+ * The distinction this carries is the whole reason for the three-state model:
+ * "this centre has no dome" and "nobody has recorded whether this centre has a
+ * dome" are different facts, and only the first justifies discarding a route.
+ * An uncertain route is reported with what would have to be checked to settle
+ * it, so the missing information is actionable rather than invisible.
+ */
+export type RouteUncertainty = {
+  routeId: string;
+  routeName: string;
+  code: "CAPABILITY_UNKNOWN";
+  /** Capability ids whose status nobody has established. */
+  unknownCapabilities: string[];
   reason: string;
 };
 
@@ -126,7 +153,23 @@ export type WorkshopPlan = {
     code: string;
     canonicalText: string;
     source: string;
+    /**
+     * `locked` means the text cannot change during generation. It has never
+     * meant that anyone checked the mapping against the curriculum document,
+     * and the interface must not read it that way.
+     */
     locked: true;
+    /**
+     * Whether a human has verified the curriculum mapping behind this lock.
+     *
+     * - `verified`   — checked against the source document by a person
+     * - `unverified` — transcribed from a source, awaiting that check
+     * - `none`       — the topic makes no curriculum claim at all
+     *
+     * Optional so packages saved before this existed still render; those are
+     * treated as unverified, which is what they were.
+     */
+    verification?: "verified" | "unverified" | "none";
   };
   profile: ResourceProfile;
   /**
@@ -151,6 +194,12 @@ export type WorkshopPlan = {
   routeName?: string;
   routeTier?: "minimal" | "classroom" | "lab";
   rejectedRoutes?: RouteRejection[];
+  /**
+   * Routes that could not be confirmed because a venue facility's status is
+   * unknown. Never merged into rejectedRoutes: doing so would restate missing
+   * information as a verified absence.
+   */
+  uncertainRoutes?: RouteUncertainty[];
   /**
    * Stamped so a generation record issued before a deploy can be recognised as
    * predating the current generator rather than silently reused.

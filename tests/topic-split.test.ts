@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { topicSlug } from "@/server/domain/topic-store";
 import { CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
 import { CATALOGUE_ENTRIES } from "@/server/content/catalogue";
+import { DEFAULT_PROFILE, generateWorkshop } from "@/server/domain/generator";
 
 /**
  * A Bilim Türkiye workshop topic and a MEB learning outcome are different
@@ -82,5 +83,40 @@ describe("no synthetic code reaches a reader", () => {
       if (!mapping) continue;
       expect(mapping.verification).toBe("unverified");
     }
+  });
+});
+
+/**
+ * A lock is an immutability guarantee, not a verification claim. The two were
+ * conflated in the interface: every plan carried a green "Doğrulandı" badge
+ * beside a curriculum code that the corpus itself records as unchecked.
+ */
+describe("the lock badge never overstates what was checked", () => {
+  it("stamps the plan with the corpus's own verification state", () => {
+    const plan = generateWorkshop(DEFAULT_PROFILE);
+    expect(plan.objective.verification).toBe("unverified");
+  });
+
+  it("says a proposal has no curriculum mapping at all", () => {
+    const plan = generateWorkshop({
+      ...DEFAULT_PROFILE,
+      proposalEntryId: "technology:12-14:yapay-zeka",
+    });
+    expect(plan.objective.verification).toBe("none");
+  });
+
+  it("shows a verified badge only for a verified mapping", () => {
+    const source = readFileSync(
+      new URL("../components/objective-lock-badge.tsx", import.meta.url),
+      "utf8",
+    )
+      // Comments discuss the word freely; only the code matters here.
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    const guard = source.indexOf('verification === "verified"');
+    expect(guard).toBeGreaterThan(-1);
+    // The affirmative badge must be unreachable except through that guard.
+    expect(source.slice(guard)).toContain("Doğrulandı");
+    expect(source.slice(0, guard)).not.toContain("Doğrulandı");
   });
 });

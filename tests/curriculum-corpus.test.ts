@@ -7,7 +7,8 @@ import {
   VENUE_CAPABILITIES,
   VENUE_CAPABILITY_IDS,
   confirmedCapabilities,
-  unpublishedCapabilities,
+  unavailableCapabilities,
+  unknownCapabilities,
 } from "@/server/content/venues";
 import {
   ALL_ROUTES,
@@ -154,6 +155,10 @@ describe("route selection", () => {
       hasInternet: true,
       materials: [...INVENTORY_PRESETS.workshop.materials],
       capabilities: [...VENUE_CAPABILITY_IDS],
+      // Nothing verified absent: a fully equipped venue has every facility, so
+      // stating it here keeps the profile well-formed rather than leaning on
+      // the domain's tie-break for contradictory input.
+      unavailableCapabilities: [],
       budgetTry: 100_000,
     });
     const best = [...getOutcomeContent(outcomeId).routes].sort(
@@ -295,15 +300,22 @@ describe("centre registry", () => {
     }
   });
 
-  it("never treats an unpublished facility as present", () => {
+  it("sorts every facility into exactly one of the three states", () => {
     for (const id of CENTRE_IDS) {
       const confirmed = confirmedCapabilities(id);
-      const unpublished = unpublishedCapabilities(id);
-      // The two sets partition the capability list and never overlap: not
-      // published is not evidence of absence, and must not become one.
-      expect(confirmed.length + unpublished.length).toBe(VENUE_CAPABILITY_IDS.length);
-      for (const capability of unpublished) expect(confirmed).not.toContain(capability);
+      const absent = unavailableCapabilities(id);
+      const unknown = unknownCapabilities(id);
+      expect(confirmed.length + absent.length + unknown.length).toBe(VENUE_CAPABILITY_IDS.length);
+      for (const capability of unknown) expect(confirmed).not.toContain(capability);
+      for (const capability of unknown) expect(absent).not.toContain(capability);
     }
+  });
+
+  it("never records a researched centre as verifiably lacking a facility", () => {
+    // Transcription can establish that a page names a planetarium. It cannot
+    // establish that a centre has none — that needs a person to have checked —
+    // so the static data may only ever produce "available" or "unknown".
+    for (const id of CENTRE_IDS) expect(unavailableCapabilities(id)).toEqual([]);
   });
 
   it("reflects the centres whose pages name a planetarium", () => {
@@ -325,11 +337,18 @@ describe("centre registry", () => {
 });
 
 describe("venue capabilities change the plan", () => {
+  /**
+   * A centre where the listed facilities are confirmed present and the rest
+   * are confirmed absent. Both lists are set, because a profile that named
+   * only one of them would leave the others unknown — a different scenario,
+   * and one the uncertainty tests cover separately.
+   */
   const spaceProfile = (capabilities: string[]): ResourceProfile => ({
     ...DEFAULT_PROFILE,
     outcomeId: "space-age",
     materials: [...INVENTORY_PRESETS.workshop.materials],
     capabilities,
+    unavailableCapabilities: VENUE_CAPABILITY_IDS.filter((id) => !capabilities.includes(id)),
     budgetTry: 100_000,
   });
 
