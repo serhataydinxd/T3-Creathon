@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   CATALOGUE,
@@ -237,6 +238,27 @@ describe("drafting a session for an unauthored catalogue topic", () => {
       })),
     });
     expect(authored.title).toBe("Model tarafından yazılan başlık");
+  });
+});
+
+/**
+ * A proposal references an objectives row, so the catalogue has to be synced
+ * wherever the application is deployed — not only where demo accounts are
+ * created. The release script is what the migration task runs on every deploy;
+ * this asserts the dependency rather than trusting a reader to notice it.
+ */
+describe("release-time seeding", () => {
+  const release = readFileSync(new URL("../scripts/seed-objective.ts", import.meta.url), "utf8");
+
+  it("syncs the published catalogue, not just the approved outcomes", () => {
+    expect(release).toContain("syncCatalogueTopics");
+    expect(release).toContain("syncOutcomes");
+  });
+
+  it("is the script the deployed migration task actually runs", () => {
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+    expect(pkg.scripts["db:release"]).toContain("db:seed-objective");
+    expect(readFileSync(new URL("../Dockerfile", import.meta.url), "utf8")).toContain("db:release");
   });
 });
 

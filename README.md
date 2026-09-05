@@ -193,7 +193,7 @@ güçlü modele geçilebilir.
 ### Doğrulama
 
 ```bash
-npm run check      # lint + 444 birim testi + üretim derlemesi
+npm run check      # lint + 446 birim testi + üretim derlemesi
 npm run check:all  # yukarısı + 39 tarayıcı testi
 ```
 
