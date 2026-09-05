@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { login, logout } from "./helpers";
+import { gotoStep } from "./support";
 
 /**
  * Step 9 of the target demo, and the reason the operational record exists: an
@@ -36,6 +37,7 @@ test("an educator's verification persists and reaches the lab", async ({ page })
   // And the lab now treats the dome as verified absent rather than unknown.
   await login(page, "content@imkan.test");
   await page.goto("/lab");
+  await gotoStep(page, "conditions");
   await page.getByTestId("venue-select").selectOption("corum");
   await expect(page.getByTestId("capability-planetarium-unavailable")).toBeChecked();
 });

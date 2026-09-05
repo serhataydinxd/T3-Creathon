@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Building2,
   ArrowRight,
   Check,
   CheckCircle2,
@@ -28,7 +29,12 @@ import { planContext } from "@/components/plan-context";
 import { ObjectiveLockBadge } from "@/components/objective-lock-badge";
 import { RouteDecisions } from "@/components/route-decisions";
 import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
-import { INVENTORY_PRESETS, INVENTORY_PRESET_IDS, MATERIAL_OPTIONS } from "@/server/content/materials";
+import {
+  INVENTORY_PRESETS,
+  INVENTORY_PRESET_IDS,
+  MATERIALS,
+  MATERIAL_OPTIONS,
+} from "@/server/content/materials";
 import {
   AUTHORED_BY_CATALOGUE_ENTRY,
   CURRICULUM,
@@ -61,6 +67,30 @@ type CapabilityChoice = "available" | "unavailable" | "unknown";
  * explicitly and is the default, so leaving it is a recorded answer rather
  * than an omission the system reads as "no".
  */
+/**
+ * The wizard's steps.
+ *
+ * Grouped by the question each answers rather than by which part of the code
+ * consumes them: a trainer thinks "what am I teaching", "where", "with what",
+ * "under what constraints". Every field keeps a safe default, so the steps
+ * guide rather than gate — generation stays available throughout.
+ */
+const STEPS = [
+  { id: "topic", label: "Konu" },
+  { id: "conditions", label: "Mekân ve koşullar" },
+  { id: "materials", label: "Malzeme" },
+  { id: "delivery", label: "Bütçe ve hazırlık" },
+] as const;
+
+/** Offered rather than free text, so the same need reads the same way twice. */
+const ACCESSIBILITY_NEEDS = [
+  "Yüksek kontrastlı basılı materyal",
+  "Büyük punto yönerge kartı",
+  "Sözlü yönerge alternatifi",
+  "Tekerlekli sandalye erişimi",
+  "Sessiz çalışma alanı",
+] as const;
+
 const CAPABILITY_CHOICES: readonly { value: CapabilityChoice; label: string }[] = [
   { value: "available", label: "Var" },
   { value: "unavailable", label: "Yok" },
@@ -91,6 +121,7 @@ export function WorkshopLab({
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [activeStage, setActiveStage] = useState(0);
   const [venueId, setVenueId] = useState<string>("school");
+  const [step, setStep] = useState(0);
   const selectedFormat = getFormat(profile.formatId);
   // The lab opens on the catalogue tab holding whatever topic is selected, so
   // the trainer lands where their default topic actually lives.
@@ -160,6 +191,20 @@ export function WorkshopLab({
     }));
   }
 
+  /**
+   * Records how many of a material the venue holds. An empty box means "not
+   * counted", which is different from zero and must not become it — so the key
+   * is removed rather than set to 0.
+   */
+  function setStock(key: MaterialKey, raw: string) {
+    setProfile((current) => {
+      const next = { ...(current.materialStock ?? {}) };
+      if (raw.trim() === "") delete next[key];
+      else next[key] = Math.max(0, Math.floor(Number(raw)));
+      return { ...current, materialStock: next };
+    });
+  }
+
   function toggleMaterial(key: MaterialKey) {
     update(
       "materials",
@@ -227,10 +272,29 @@ export function WorkshopLab({
           <span className="mode-badge"><span /> {live ? "CANLI ÜRETİM · doğrulamalı" : "REPLAY · güvenli demo"}</span>
         </div>
 
+        <nav className="wizard-steps" aria-label="Üretim adımları">
+          <ol>
+            {STEPS.map((entry, index) => (
+              <li key={entry.id}>
+                <button
+                  type="button"
+                  data-testid={`step-button-${entry.id}`}
+                  aria-current={index === step ? "step" : undefined}
+                  className={index === step ? "current" : index < step ? "done" : ""}
+                  onClick={() => setStep(index)}
+                >
+                  <span>{index + 1}</span>
+                  {entry.label}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
         <div className="configuration-grid">
           <div className="form-stack">
             {generationError && <div className="error-notice" role="alert"><CircleAlert />{generationError}</div>}
-            <section className="panel objective-panel">
+            <section className="panel objective-panel" hidden={step !== 0} data-testid="step-topic">
               <div className="panel-kicker"><LockKeyhole size={17} /> 01 · Konu Kilidi</div>
               <p className="panel-help">
                 Konu listesi Bilim Türkiye&apos;nin yayımlanmış atölye kataloğudur. İMKÂN&apos;ın
@@ -335,8 +399,8 @@ export function WorkshopLab({
               </p>
             </section>
 
-            <section className="panel">
-              <div className="panel-kicker"><Sparkles size={17} /> 02 · Gerçek sınıf koşulları</div>
+            <section className="panel" hidden={step !== 1} data-testid="step-conditions">
+              <div className="panel-kicker"><Sparkles size={17} /> 02 · Mekân ve koşullar</div>
               <div className="field-grid three">
                 <label><span>Süre</span><select value={profile.durationMinutes} onChange={(event) => update("durationMinutes", Number(event.target.value) as 40 | 60 | 80)}><option value="40">40 dakika</option><option value="60">60 dakika</option><option value="80">80 dakika</option></select></label>
                 <label><span>Öğrenci sayısı</span><input type="number" min="6" max="50" value={profile.classSize} onChange={(event) => update("classSize", Number(event.target.value))} /></label>
@@ -464,13 +528,9 @@ export function WorkshopLab({
                 &quot;Bilinmiyor&quot; bir yanıttır: donanım gerektiren rota elenmez, belirsiz
                 olarak raporlanır.
               </p>
-              <div className="budget-row">
-                <label><span>Toplam bütçe</span><div className="input-affix"><input type="number" min="0" value={profile.budgetTry} onChange={(event) => update("budgetTry", Number(event.target.value))} /><b>₺</b></div></label>
-                <label className="check-label"><input type="checkbox" checked={profile.hardBudget} onChange={(event) => update("hardBudget", event.target.checked)} /><span><strong>Kesin bütçe sınırı</strong><small>Aşım olursa üretimi durdur</small></span></label>
-              </div>
             </section>
 
-            <section className="panel">
+            <section className="panel" hidden={step !== 2} data-testid="step-materials">
               <div className="panel-kicker"><PackageCheck size={17} /> 03 · Mevcut malzemeler</div>
               <p className="panel-help">Oturumda gerçekten bulunanları seçin. Sistem yalnızca bunları veya onaylı alternatiflerini kullanır.</p>
               <div className="preset-row">
@@ -501,16 +561,124 @@ export function WorkshopLab({
                   </button>
                 ))}
               </div>
+              {profile.materials.length > 0 && (
+                <>
+                  <p className="panel-help stock-help">
+                    İsterseniz adet girin. Boş bırakılan malzeme için miktar denetimi yapılmaz;
+                    girilen miktar oturumun ihtiyacından azsa uyarı verilir.
+                  </p>
+                  <div className="stock-grid">
+                    {profile.materials.map((key) => (
+                      <label className="stock-row" key={key}>
+                        <span>{MATERIALS[key].label}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="adet"
+                          data-testid={`stock-${key}`}
+                          value={profile.materialStock?.[key] ?? ""}
+                          onChange={(event) => setStock(key, event.target.value)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
             </section>
+
+            <section className="panel" hidden={step !== 3} data-testid="step-delivery">
+              <div className="panel-kicker"><WalletCards size={17} /> 04 · Bütçe, hazırlık ve erişilebilirlik</div>
+              <div className="budget-row">
+                <label><span>Toplam bütçe</span><div className="input-affix"><input type="number" min="0" value={profile.budgetTry} onChange={(event) => update("budgetTry", Number(event.target.value))} /><b>₺</b></div></label>
+                <label className="check-label"><input type="checkbox" checked={profile.hardBudget} onChange={(event) => update("hardBudget", event.target.checked)} /><span><strong>Kesin bütçe sınırı</strong><small>Aşım olursa üretimi durdur</small></span></label>
+              </div>
+              <div className="inline-fields">
+                <label>
+                  <span>Hazırlık süresi</span>
+                  <select
+                    data-testid="prep-select"
+                    value={profile.prepMinutes ?? 0}
+                    onChange={(event) => update("prepMinutes", Number(event.target.value))}
+                  >
+                    {[0, 5, 15, 30, 60].map((minutes) => (
+                      <option key={minutes} value={minutes}>{minutes} dakika</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Erişilebilirlik ihtiyacı</span>
+                  <select
+                    data-testid="accessibility-select"
+                    value={profile.accessibilityNeeds[0] ?? ""}
+                    onChange={(event) =>
+                      update("accessibilityNeeds", event.target.value ? [event.target.value] : [])
+                    }
+                  >
+                    <option value="">Belirtilmedi</option>
+                    {ACCESSIBILITY_NEEDS.map((need) => (
+                      <option key={need} value={need}>{need}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="field-label" htmlFor="evidence-input">
+                Beklenen öğrenme kanıtı (isteğe bağlı)
+              </label>
+              <textarea
+                id="evidence-input"
+                data-testid="evidence-input"
+                className="evidence-input"
+                rows={3}
+                maxLength={300}
+                placeholder="Oturum sonunda katılımcıda görmek istediğiniz somut çıktı."
+                value={profile.expectedEvidence ?? ""}
+                onChange={(event) => update("expectedEvidence", event.target.value)}
+              />
+              <p className="panel-help">
+                Yazarsanız model bu hedefe doğru yazar; boş bırakılırsa aşamaların kendi kanıt
+                ölçütleri kullanılır. Kanıtı model uydurmaz.
+              </p>
+            </section>
+            <div className="wizard-nav">
+              <button
+                type="button"
+                className="button"
+                data-testid="step-back"
+                disabled={step === 0}
+                onClick={() => setStep((current) => Math.max(0, current - 1))}
+              >
+                <ArrowLeft size={16} /> Geri
+              </button>
+              <span className="wizard-progress" aria-live="polite">
+                Adım {step + 1} / {STEPS.length}
+              </span>
+              <button
+                type="button"
+                className="button"
+                data-testid="step-next"
+                disabled={step === STEPS.length - 1}
+                onClick={() => setStep((current) => Math.min(STEPS.length - 1, current + 1))}
+              >
+                İleri <ArrowRight size={16} />
+              </button>
+            </div>
           </div>
 
           <aside className="summary-panel">
             <span className="overline">Üretim özeti</span>
             <h2>Atölyenin sınırları</h2>
             <dl>
-              <div><dt><Clock3 /> Süre</dt><dd>{profile.durationMinutes} dk</dd></div>
+              <div><dt><Clock3 /> Süre</dt><dd>{profile.durationMinutes} dk{(profile.prepMinutes ?? 0) > 0 ? ` +${profile.prepMinutes} hazırlık` : ""}</dd></div>
               <div><dt><Users /> Gruplar</dt><dd>{Math.ceil(profile.classSize / profile.groupSize)} × ~{profile.groupSize}</dd></div>
-              <div><dt><WalletCards /> Bütçe</dt><dd>{profile.budgetTry} ₺</dd></div>
+              {/*
+                * Venue and format decide which routes are even eligible, so a
+                * summary of "the workshop's limits" that omitted them was
+                * listing the inputs that matter least.
+                */}
+              <div><dt><Building2 /> Yer</dt><dd>{venueId === "school" ? SCHOOL_CLASSROOM.label : CENTRES[venueId as CentreId].name}</dd></div>
+              <div><dt><Sparkles /> Format</dt><dd>{selectedFormat.shortLabel ?? selectedFormat.label}</dd></div>
+              <div><dt><ShieldCheck /> Donanım</dt><dd>{(profile.capabilities ?? []).length} var · {unsettledCapabilities.length} bilinmiyor</dd></div>
+              <div><dt><WalletCards /> Bütçe</dt><dd>{profile.budgetTry} ₺{profile.hardBudget ? " kesin" : ""}</dd></div>
               <div><dt><PackageCheck /> Malzeme</dt><dd>{profile.materials.length} çeşit</dd></div>
             </dl>
             <div className="safety-note"><ShieldCheck /><div><strong>Güvenlik filtresi açık</strong><p>Yalnızca yaşa ve koşullara uygun, önceden onaylı etkinlik şablonları kullanılacak.</p></div></div>

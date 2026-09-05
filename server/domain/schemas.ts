@@ -42,6 +42,24 @@ export const resourceProfileSchema = z.object({
     .refine((items) => new Set(items).size === items.length, "Donanım tekrarlanamaz.")
     .default([]),
   formatId: z.enum(FORMAT_IDS).default(DEFAULT_FORMAT_ID),
+  /** Setup time before the session. Defaulted so older profiles still parse. */
+  prepMinutes: z.number().int().min(0).max(240).default(0),
+  expectedEvidence: z.string().trim().max(300).default(""),
+  /**
+   * Per-material counts. Keyed by material id and validated against the
+   * registry, so an unknown key is refused at the edge rather than silently
+   * ignored in the costing.
+   */
+  materialStock: z
+    .record(z.string(), z.number().int().min(0).max(10_000))
+    // A partial map, so an enum key type would demand all 26 entries. Keys are
+    // checked against the registry here instead: an unknown material must be
+    // refused at the edge, not ignored somewhere inside the costing.
+    .refine(
+      (stock) => Object.keys(stock).every((key) => (MATERIAL_IDS as readonly string[]).includes(key)),
+      "Bilinmeyen malzeme.",
+    )
+    .default({}),
   /**
    * A published catalogue topic with no authored session, to be drafted.
    * Validated against the registry rather than as a free string: the id names

@@ -64,3 +64,18 @@ export async function tabUntil(
   }
   return false;
 }
+
+/**
+ * Moves the lab wizard to a named step.
+ *
+ * The steps guide rather than gate — every field has a safe default and
+ * generation stays available throughout — so a test may jump straight to the
+ * step holding the control it is about, exactly as a returning trainer would.
+ */
+export async function gotoStep(
+  page: Page,
+  id: "topic" | "conditions" | "materials" | "delivery",
+): Promise<void> {
+  await page.getByTestId(`step-button-${id}`).click();
+  await expect(page.getByTestId(`step-${id}`)).toBeVisible();
+}

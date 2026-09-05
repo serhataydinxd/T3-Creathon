@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { login } from "./helpers";
-import { publishWorkshop, seriousViolations } from "./support";
+import { publishWorkshop, seriousViolations, gotoStep } from "./support";
 
 /**
  * The axe sweep previously stopped at the public pages and the dashboard, which
@@ -77,6 +77,7 @@ test("the package page and print pack have no serious accessibility violations",
 test("material toggles agree between their visual and announced state", async ({ page }) => {
   await login(page, "content@imkan.test");
   await page.goto("/lab");
+  await gotoStep(page, "materials");
 
   const paper = page.getByTestId("material-paper");
   const before = await paper.getAttribute("aria-pressed");

@@ -166,6 +166,19 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
         "Bu konu Bilim Türkiye kataloğunda yayımlanmıştır ancak İMKÂN'da onaylı içeriği yoktur. Üretilen oturum bir taslak öneridir ve pedagog onayı olmadan uygulanmamalıdır.",
     });
   }
+  // Stock the trainer declared against what the plan actually consumes. A
+  // warning rather than a blocker: the shortfall may be a trip to a cupboard,
+  // and the trainer is better placed than the code to judge that.
+  const shortfalls = materialPlan
+    .map((line) => ({ line, held: profile.materialStock?.[line.key] }))
+    .filter(({ line, held }) => typeof held === "number" && held < line.totalQuantity);
+  for (const { line, held } of shortfalls) {
+    findings.push({
+      code: "INSUFFICIENT_STOCK",
+      severity: "warning",
+      message: `${line.label}: oturum ${line.totalQuantity} adet gerektiriyor, envanterde ${held} adet bildirildi.`,
+    });
+  }
   if (profile.accessibilityNeeds.length > 0) {
     findings.push({
       code: "ACCESSIBILITY_ADAPTATION_APPLIED",
@@ -236,6 +249,9 @@ export const DEFAULT_PROFILE: ResourceProfile = {
   // profile states that rather than leaving three unknowns for the trainer.
   unavailableCapabilities: [...SCHOOL_CLASSROOM.unavailableCapabilities],
   accessibilityNeeds: ["Yüksek kontrastlı basılı materyal"],
+  prepMinutes: 15,
+  expectedEvidence: "",
+  materialStock: {},
   outcomeId: DEFAULT_OUTCOME_ID,
   formatId: DEFAULT_FORMAT_ID,
 };

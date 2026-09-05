@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { login } from "./helpers";
-import { focusIsVisible, tabUntil } from "./support";
+import { focusIsVisible, gotoStep, tabUntil } from "./support";
 
 /**
  * A teacher must be able to configure and generate a workshop without a mouse.
@@ -37,6 +37,7 @@ test("the outcome selector is reachable and changeable by keyboard", async ({ pa
 test("an inventory preset can be applied from the keyboard", async ({ page }) => {
   await login(page, "content@imkan.test");
   await page.goto("/lab");
+  await gotoStep(page, "materials");
 
   const presets = page.locator('[data-testid^="preset-"]');
   await expect(presets.first()).toBeVisible();
@@ -65,6 +66,7 @@ test("an inventory preset can be applied from the keyboard", async ({ page }) =>
 test("a material toggles with the keyboard and announces its new state", async ({ page }) => {
   await login(page, "content@imkan.test");
   await page.goto("/lab");
+  await gotoStep(page, "materials");
 
   const material = page.getByTestId("material-paper");
   const before = await material.getAttribute("aria-pressed");

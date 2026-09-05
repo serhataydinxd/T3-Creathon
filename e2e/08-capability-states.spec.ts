@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { login } from "./helpers";
+import { gotoStep } from "./support";
 
 /**
  * Steps 8 and 9 of the target demo: a centre that publishes nothing about its
@@ -18,6 +19,7 @@ test("an unpublished facility leaves a route uncertain rather than rejected", as
   await page.getByTestId("domain-select").selectOption("astronomy-aviation-space");
   await page.getByTestId("cohort-select").selectOption("12-14");
   await page.getByTestId("outcome-select").selectOption(DOME_TOPIC);
+  await gotoStep(page, "conditions");
   await page.getByTestId("venue-select").selectOption("corum");
 
   // The centre publishes nothing about the dome, so the profile says unknown.
@@ -43,6 +45,7 @@ test("verifying the facility is absent turns uncertainty into a rejection", asyn
   await page.getByTestId("domain-select").selectOption("astronomy-aviation-space");
   await page.getByTestId("cohort-select").selectOption("12-14");
   await page.getByTestId("outcome-select").selectOption(DOME_TOPIC);
+  await gotoStep(page, "conditions");
   await page.getByTestId("venue-select").selectOption("corum");
 
   // The educator checks, and records that the centre has no dome.

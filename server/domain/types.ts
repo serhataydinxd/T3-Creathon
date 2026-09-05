@@ -41,6 +41,31 @@ export type ResourceProfile = {
   /** Which Bilim Türkiye education format the session is delivered under. */
   formatId?: string;
   /**
+   * Minutes the trainer has before the session to set up.
+   *
+   * Not part of the session's own duration — the 5E allocation is unchanged by
+   * it — but a route needing an hour of preparation is a different proposition
+   * from one needing five minutes, and nothing recorded that before.
+   */
+  prepMinutes?: number;
+  /**
+   * What the trainer expects to see as evidence of learning.
+   *
+   * Collected before generation so the model writes towards a stated goal
+   * rather than inventing one, and so a reviewer can check the session against
+   * what was actually asked for.
+   */
+  expectedEvidence?: string;
+  /**
+   * How many of each material the venue actually holds.
+   *
+   * Separate from `materials`, which records only whether an item is available
+   * at all. A classroom with four pairs of scissors and six groups can run the
+   * session; one with four pairs and twelve groups cannot, and that was
+   * invisible while stock was a boolean.
+   */
+  materialStock?: Record<string, number>;
+  /**
    * A published catalogue topic İMKÂN has no authored session for, chosen so
    * the assistant can draft one. Mutually exclusive with a meaningful
    * outcomeId: when this is set the plan is a proposal awaiting pedagogue
