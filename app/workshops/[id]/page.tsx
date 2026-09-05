@@ -5,6 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { createRevisionAction, feedbackAction, reviewWorkshopAction, submitWorkshopAction } from "@/app/actions/workshops";
 import { publishWorkshopAction } from "@/app/actions/manager";
 import { startDeliveryAction } from "@/app/actions/deliveries";
+import { adaptationOrigin } from "@/server/domain/adaptation";
 import { CENTRES, CENTRE_IDS } from "@/server/content/venues";
 import { requireUser } from "@/server/auth/session";
 import { getFeedbackSummary, getReviews, getWorkshop } from "@/server/domain/workshops";
@@ -38,11 +39,32 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
   if (!workshop) notFound();
   const history = await getReviews(id);
   const feedback = await getFeedbackSummary(user, id);
+  // Provenance for a draft that came from the library, so a reviewer can see
+  // what it was adapted from and what the comparison said at the time.
+  const origin = await adaptationOrigin(id);
   const plan = workshop.content;
   return (
     <AppShell user={user}>
       <section className="page persisted-workshop">
         {(notices.submitted || notices.reviewed || notices.feedback) && <div className="success-notice" role="status"><CheckCircle2 /> İşlem başarıyla kaydedildi.</div>}
+        {origin && (
+          <section className="origin-note" data-testid="adaptation-origin">
+            <span className="overline">Uyarlama kökeni</span>
+            <p>
+              Bu taslak, <Link href={`/library/${origin.entryId}`}>{origin.entryTitle}</Link> kaydından{" "}
+              {origin.adaptedByName} tarafından uyarlandı
+              {origin.sourceCentre ? ` (kaynak merkez: ${origin.sourceCentre})` : ""}. Kaynak sürüm
+              değiştirilmedi.
+            </p>
+            <ul>
+              {(origin.record.compatibility as { findings: { code: string; message: string }[] }).findings.map(
+                (finding) => (
+                  <li key={finding.code + finding.message}>{finding.message}</li>
+                ),
+              )}
+            </ul>
+          </section>
+        )}
         <header className="persisted-header">
           <div><span className="overline">{planContext(plan)} · Sürüm {workshop.version}</span><h1>{workshop.title}</h1><p>{plan.adaptationSummary}</p></div>
           <div className="header-tags"><span data-testid="plan-mode" data-mode={plan.mode} className={`mode-tag ${plan.mode === "LIVE" ? "live" : "replay"}`}>{plan.mode === "LIVE" ? "CANLI ÜRETİM" : "REPLAY"}</span><span data-testid="workflow-status" data-status={workshop.status} className={`workflow-status ${workshop.status}`}>{statusLabels[workshop.status]}</span></div>

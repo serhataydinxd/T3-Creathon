@@ -349,3 +349,13 @@ select, input[type="number"] { width: 100%; height: 42px; border: 1px solid var(
 .library-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
 .library-adapted, .library-rating { font: 600 9px var(--font-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
 .library-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 20px; }
+/* The compatibility comparison, shown before anything is created. */
+.compatibility { border: 1px solid var(--line); border-radius: 11px; padding: 14px; margin-top: 12px; background: white; }
+.compatibility ul { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 6px; }
+.compatibility li { font-size: 11px; color: var(--muted); line-height: 1.55; padding-left: 12px; border-left: 2px solid var(--line); }
+.compatibility li[data-severity="warning"] { border-left-color: #e6cf9e; }
+.compatibility li[data-severity="blocker"] { border-left-color: #d9a9a9; }
+.origin-note { border: 1px solid var(--line); border-left: 3px solid var(--green); border-radius: 11px; padding: 14px 16px; margin-bottom: 16px; background: var(--panel); }
+.origin-note p { font-size: 12px; margin: 6px 0 0; }
+.origin-note ul { list-style: none; margin: 9px 0 0; padding: 0; display: grid; gap: 5px; }
+.origin-note li { font-size: 11px; color: var(--muted); line-height: 1.55; }
