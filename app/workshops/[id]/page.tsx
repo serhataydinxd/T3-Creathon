@@ -4,6 +4,8 @@ import { CheckCircle2, Clock3, LockKeyhole, ShieldCheck, Star, Users } from "luc
 import { AppShell } from "@/components/app-shell";
 import { createRevisionAction, feedbackAction, reviewWorkshopAction, submitWorkshopAction } from "@/app/actions/workshops";
 import { publishWorkshopAction } from "@/app/actions/manager";
+import { startDeliveryAction } from "@/app/actions/deliveries";
+import { CENTRES, CENTRE_IDS } from "@/server/content/venues";
 import { requireUser } from "@/server/auth/session";
 import { getFeedbackSummary, getReviews, getWorkshop } from "@/server/domain/workshops";
 import { MaterialLedger } from "@/components/material-ledger";
@@ -60,6 +62,28 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
             {workshop.status === "submitted" && user.role === "pedagogue" && <form action={reviewWorkshopAction} className="review-form"><input type="hidden" name="id" value={id} /><label><span>İnceleme notu</span><textarea name="comment" minLength={3} maxLength={1000} required defaultValue="Konu bağlantısı ve ölçme kanıtı uygun." /></label><div><button className="button ghost" name="decision" value="changes_requested" type="submit">Değişiklik iste</button><button className="button primary" name="decision" value="approved" type="submit">Pedagojik olarak onayla</button></div></form>}
             {workshop.status === "approved" && user.role === "manager" && <form action={publishWorkshopAction}><input type="hidden" name="id" value={id} /><p>Pedagojik onayı tamamlanan bu değişmez sürümü eğitmenlere açın.</p><button className="button primary wide" type="submit">Paketi yayımla</button></form>}
             {workshop.status === "published" && <><div className="published-note"><CheckCircle2 /><p>Bu sürüm eğitmenlerin kullanımına açıktır.</p></div><Link className="button ghost wide" href={`/print/${id}`} target="_blank">Yazdırma paketini aç</Link></>}
+            {workshop.status === "published" && (user.role === "educator" || user.role === "manager") && (
+              /*
+               * Only from a published version. A delivery record asserts that
+               * this session was run with children in a room, and a draft has
+               * not been through pedagogical review.
+               */
+              <form action={startDeliveryAction} className="feedback-form" data-testid="start-delivery-form">
+                <input type="hidden" name="versionId" value={id} />
+                <label>
+                  <span>Uygulama yeri</span>
+                  <select name="centreSlug" defaultValue="" data-testid="delivery-centre">
+                    <option value="">Okul sınıfı</option>
+                    {CENTRE_IDS.map((slug) => (
+                      <option key={slug} value={slug}>{CENTRES[slug].name}</option>
+                    ))}
+                  </select>
+                </label>
+                <button className="button primary wide" type="submit" data-testid="start-delivery">
+                  Uygulama raporu oluştur
+                </button>
+              </form>
+            )}
             {workshop.status === "published" && user.role === "educator" && <form action={feedbackAction} className="feedback-form"><input type="hidden" name="id" value={id} /><label><span>Puan</span><select name="rating" defaultValue="5"><option value="5">5 — Çok iyi</option><option value="4">4 — İyi</option><option value="3">3 — Orta</option><option value="2">2 — Zayıf</option><option value="1">1 — Uygun değil</option></select></label><label><span>Oturum geri bildirimi</span><textarea name="comment" minLength={3} maxLength={1000} required placeholder="Neyin işe yaradığını yazın…" /></label><button className="button primary wide" type="submit">Geri bildirimi kaydet</button></form>}
             {history.length > 0 && <div className="review-history"><h3>Karar geçmişi</h3>{history.map((review) => <div key={`${review.createdAt.toISOString()}-${review.reviewerName}`}><strong>{review.reviewerName}</strong><span>{review.decision === "approved" ? "Onayladı" : "Değişiklik istedi"}</span><p>{review.comment}</p></div>)}</div>}
             {feedback.count > 0 && <div className="review-history feedback-history" data-testid="feedback-summary"><h3>Oturum geri bildirimi</h3><p className="feedback-average"><Star /> <strong data-testid="feedback-average">{feedback.averageRating}</strong> / 5 · {feedback.count} eğitmen</p><div className="rating-bars">{feedback.distribution.map((bucket) => <div key={bucket.rating}><span>{bucket.rating}</span><i><b style={{ width: `${bucket.share}%` }} /></i><small>{bucket.count}</small></div>)}</div>{feedback.entries.map((entry) => <div key={`${entry.createdAt.toISOString()}-${entry.educatorName}`}><strong>{entry.own ? "Siz" : entry.educatorName}</strong><span>{entry.rating}/5</span><p>{entry.comment}</p></div>)}</div>}

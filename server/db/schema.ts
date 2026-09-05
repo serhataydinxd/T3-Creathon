@@ -351,3 +351,142 @@ export const educatorFeedback = pgTable(
   },
   (table) => [uniqueIndex("feedback_version_educator_idx").on(table.versionId, table.educatorId)],
 );
+
+/**
+ * The report lifecycle, mirroring the workshop one so the two read alike.
+ *
+ * `published` here means visible in the Etkinlik Kütüphanesi, which is a
+ * separate decision from the pedagogue's approval — approving a report says it
+ * is accurate, publishing it says it may be shared.
+ */
+export const reportStatus = pgEnum("report_status", [
+  "draft",
+  "submitted",
+  "changes_requested",
+  "approved",
+  "published",
+  "superseded",
+]);
+
+/** Who may see a delivery report once it is approved. */
+export const reportVisibility = pgEnum("report_visibility", ["private", "centre", "public"]);
+
+/** What became of a planned stage when the session actually ran. */
+export const stageOutcome = pgEnum("stage_outcome", ["applied", "modified", "skipped"]);
+
+/**
+ * One actual delivery of a published workshop.
+ *
+ * `planSnapshot` is the whole point: an immutable copy of the published
+ * version taken when the delivery starts. The source workshop can be revised
+ * afterwards — that is what versions are for — and a report describing what
+ * was actually delivered must not silently change underneath the person who
+ * wrote it.
+ *
+ * Planned figures live in the snapshot and actual ones in their own columns,
+ * side by side and never overwriting each other, because the comparison is the
+ * substance of the report.
+ */
+export const deliveryRecords = pgTable(
+  "delivery_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    versionId: uuid("version_id").notNull().references(() => workshopVersions.id),
+    centreId: uuid("centre_id").references(() => centres.id),
+    educatorId: uuid("educator_id").notNull().references(() => users.id),
+    planSnapshot: jsonb("plan_snapshot").notNull(),
+    deliveredOn: text("delivered_on"),
+    actualParticipants: integer("actual_participants"),
+    actualGroups: integer("actual_groups"),
+    actualMinutes: integer("actual_minutes"),
+    actualCostTry: integer("actual_cost_try"),
+    whatWorked: text("what_worked"),
+    whatWasHard: text("what_was_hard"),
+    accessibilityApplied: text("accessibility_applied"),
+    /**
+     * Safety observations stay on the record and are never copied into a
+     * public library entry automatically: an incident is operational
+     * information for the centre, not promotional material.
+     */
+    safetyObservation: text("safety_observation"),
+    incidentOccurred: boolean("incident_occurred").notNull().default(false),
+    nextTime: text("next_time"),
+    visibility: reportVisibility("visibility").notNull().default("private"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("delivery_version_idx").on(table.versionId)],
+);
+
+/** What happened to each planned 5E stage, with the educator's reason. */
+export const deliveryStages = pgTable(
+  "delivery_stages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deliveryId: uuid("delivery_id").notNull().references(() => deliveryRecords.id, { onDelete: "cascade" }),
+    stageKey: text("stage_key").notNull(),
+    outcome: stageOutcome("outcome").notNull().default("applied"),
+    /** Why it was changed or skipped. Required by the domain for both. */
+    note: text("note"),
+    /** What the educator actually observed, as opposed to what was expected. */
+    evidenceObserved: text("evidence_observed"),
+  },
+  (table) => [uniqueIndex("delivery_stage_idx").on(table.deliveryId, table.stageKey)],
+);
+
+/** Materials as actually used, beside what the plan asked for. */
+export const deliveryMaterials = pgTable(
+  "delivery_materials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deliveryId: uuid("delivery_id").notNull().references(() => deliveryRecords.id, { onDelete: "cascade" }),
+    materialId: text("material_id").notNull(),
+    plannedQuantity: integer("planned_quantity"),
+    actualQuantity: integer("actual_quantity"),
+    /** A different material used in its place, when one was. */
+    substituteMaterialId: text("substitute_material_id"),
+    note: text("note"),
+  },
+  (table) => [uniqueIndex("delivery_material_idx").on(table.deliveryId, table.materialId)],
+);
+
+/**
+ * A version of the report narrative for one delivery.
+ *
+ * Immutable, like a workshop version: an approved report is superseded by a
+ * new version rather than edited, so what a pedagogue approved stays readable
+ * exactly as they approved it.
+ */
+export const deliveryReports = pgTable(
+  "delivery_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deliveryId: uuid("delivery_id").notNull().references(() => deliveryRecords.id, { onDelete: "cascade" }),
+    version: integer("version").notNull().default(1),
+    status: reportStatus("status").notNull().default("draft"),
+    /** The narrative sections, authored by the model or edited by a person. */
+    narrative: jsonb("narrative").notNull(),
+    /** Which produced this text, so provenance survives an edit. */
+    mode: text("mode").notNull().default("replay"),
+    providerModel: text("provider_model"),
+    createdBy: uuid("created_by").notNull().references(() => users.id),
+    approvedBy: uuid("approved_by").references(() => users.id),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("delivery_report_version_idx").on(table.deliveryId, table.version)],
+);
+
+export const reportTransitions = pgTable(
+  "report_transitions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reportId: uuid("report_id").notNull().references(() => deliveryReports.id, { onDelete: "cascade" }),
+    fromStatus: reportStatus("from_status").notNull(),
+    toStatus: reportStatus("to_status").notNull(),
+    actorId: uuid("actor_id").notNull().references(() => users.id),
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("report_transitions_idx").on(table.reportId)],
+);

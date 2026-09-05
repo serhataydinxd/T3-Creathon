@@ -3,6 +3,8 @@ import "server-only";
 import type { Finding, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 import { generateWorkshop } from "@/server/domain/generator";
 import { authorWorkshop } from "./authoring";
+import { authorReport, offlineNarrative, type DeliveryFacts } from "./reporting";
+import type { ReportNarrative } from "@/server/domain/reports";
 import {
   ProviderError,
   createOpenAICompatibleProvider,
@@ -107,4 +109,45 @@ export async function generateWorkshopPlan(
     plan: { ...skeleton, findings: [...skeleton.findings, fallbackFinding(reason)] },
     model: null,
   };
+}
+
+/**
+ * A report narrative, always produced.
+ *
+ * Same shape as workshop generation and for the same reason: an educator who
+ * has just written up a session must not be blocked by a provider. The offline
+ * narrative is built from the record itself, so the fallback is not a degraded
+ * guess — it is the same facts, plainly stated.
+ */
+export async function generateReportNarrative(
+  facts: DeliveryFacts,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Promise<{ narrative: ReportNarrative; mode: "live" | "replay"; model: string | null }> {
+  const offline = offlineNarrative(facts);
+  if (!liveGenerationEnabled(env)) return { narrative: offline, mode: "replay", model: null };
+
+  const config = readProviderConfig(env);
+  if (!config) return { narrative: offline, mode: "replay", model: null };
+  const timeoutMs = Number(env.AI_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
+  const provider = createOpenAICompatibleProvider(config);
+  const deadline = Date.now() + timeoutMs;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs < MIN_ATTEMPT_MS) break;
+    try {
+      const narrative = await authorReport(
+        provider,
+        facts,
+        Math.min(MAX_ATTEMPT_MS, remainingMs),
+      );
+      return { narrative, mode: "live", model: config.model };
+    } catch (error) {
+      const reason = error instanceof ProviderError ? error.code : "UNKNOWN";
+      // The code only: a delivery record carries classroom detail.
+      console.warn(`[imkan] report generation attempt ${attempt} failed: ${reason}`);
+      if (!RETRYABLE.has(reason)) break;
+    }
+  }
+  return { narrative: offline, mode: "replay", model: null };
 }

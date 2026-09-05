@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Building2, CircleHelp, FlaskConical, LayoutDashboard, LockKeyhole } from "lucide-react";
+import { BookOpen, Building2, CircleHelp, ClipboardList, FlaskConical, LayoutDashboard, LockKeyhole } from "lucide-react";
 import { Brand } from "./brand";
 import { logoutAction } from "@/app/actions/auth";
 import type { AuthUser } from "@/server/auth/session";
@@ -28,6 +28,11 @@ export function AppShell({ children, user }: { children: React.ReactNode; user?:
           <Link className={`nav-item ${pathname === "/lab" ? "active" : ""}`} href={user ? "/lab" : "/login"}>
             <FlaskConical size={18} /> Atölye laboratuvarı
           </Link>
+          {user && (
+            <Link className={`nav-item ${pathname.startsWith("/deliveries") ? "active" : ""}`} href="/deliveries">
+              <ClipboardList size={18} /> Etkinlik raporları
+            </Link>
+          )}
           {user && (
             <Link className={`nav-item ${pathname === "/centres" ? "active" : ""}`} href="/centres">
               <Building2 size={18} /> Merkez ve envanter

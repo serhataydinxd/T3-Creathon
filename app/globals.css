@@ -306,3 +306,23 @@ select, input[type="number"] { width: 100%; height: 42px; border: 1px solid var(
 .evidence-input { width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 10px 11px; font: inherit; font-size: 12px; color: var(--ink); background: white; resize: vertical; margin-bottom: 10px; }
 .evidence-input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(23,107,82,.08); }
 @media (max-width: 760px) { .stock-grid { grid-template-columns: 1fr; } }
+/* Delivery report. Planned and actual are two columns because the comparison
+   is the substance — 24 expected against 21 present says what neither does. */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.compare-grid > div { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--panel); }
+.compare-grid dl { margin: 10px 0 0; display: grid; gap: 8px; }
+.compare-grid dl > div { display: flex; justify-content: space-between; gap: 12px; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 7px; font-size: 11px; }
+.compare-grid dl > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.compare-grid dt { display: flex; align-items: center; gap: 6px; color: var(--muted); margin: 0; }
+.compare-grid dt svg { width: 13px; height: 13px; }
+.compare-grid dd { margin: 0; font-family: var(--font-mono); font-size: 11px; }
+.delivery-form { margin-bottom: 18px; }
+.delivery-form .panel-kicker { margin-top: 18px; }
+.delivery-stages { display: grid; gap: 8px; margin-bottom: 6px; }
+.delivery-stage { display: grid; grid-template-columns: 130px 1fr 130px 1fr 1fr; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; }
+.delivery-stage strong { font-size: 11px; }
+.delivery-stage small { color: var(--muted); font-size: 10px; }
+.delivery-stage input, .delivery-stage select { height: 32px; font-size: 11px; }
+.review-decision { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.review-decision input { height: 36px; min-width: 180px; }
+@media (max-width: 900px) { .compare-grid { grid-template-columns: 1fr; } .delivery-stage { grid-template-columns: 1fr; } }
