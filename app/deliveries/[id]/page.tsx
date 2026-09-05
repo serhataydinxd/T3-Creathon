@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CircleAlert, Clock3, Users, WalletCards } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -239,6 +240,15 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
               ))}
               {canEdit && <button className="button" type="submit" data-testid="save-report">Metni kaydet</button>}
             </form>
+          )}
+
+          {narrative && (
+            <p className="panel-help">
+              <Link href={`/deliveries/${id}/print`} data-testid="print-report">
+                Raporu yazdır
+              </Link>{" "}
+              · Güvenlik ve olay kaydı yalnızca bu belgede yer alır.
+            </p>
           )}
 
           <div className="review-actions">

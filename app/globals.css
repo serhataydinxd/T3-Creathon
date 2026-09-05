@@ -359,3 +359,27 @@ select, input[type="number"] { width: 100%; height: 42px; border: 1px solid var(
 .origin-note p { font-size: 12px; margin: 6px 0 0; }
 .origin-note ul { list-style: none; margin: 9px 0 0; padding: 0; display: grid; gap: 5px; }
 .origin-note li { font-size: 11px; color: var(--muted); line-height: 1.55; }
+
+/* Delivery report print sheet. Styled for screen as well as print: a print
+   view nobody can proofread on screen gets proofread on paper, once, badly. */
+.report-print { max-width: 780px; margin: 0 auto; padding: 32px 28px 48px; color: var(--ink); }
+.print-back { margin-bottom: 16px; font-size: 12px; }
+.report-print header { border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 20px; }
+.report-print .print-eyebrow { font: 600 10px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--green); }
+.report-print h1 { font-size: 22px; margin: 6px 0 4px; }
+.report-print h2 { font-size: 13px; margin: 0 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
+.report-print section { margin-bottom: 20px; break-inside: avoid; }
+.report-print p { font-size: 12px; line-height: 1.65; margin: 0; }
+.report-print .print-pairs { display: grid; gap: 6px; margin: 0; }
+.report-print .print-pairs > div { display: grid; grid-template-columns: 160px 1fr; gap: 10px; font-size: 12px; }
+.report-print .print-pairs dt { color: var(--muted); margin: 0; }
+.report-print .print-pairs dd { margin: 0; }
+.print-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.print-table th, .print-table td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+.print-table thead th { background: var(--panel); font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+.report-print footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 10px; color: var(--muted); line-height: 1.6; }
+@media print {
+  .report-print { padding: 0; max-width: none; }
+  .report-print section { page-break-inside: avoid; }
+  .report-print h2 { page-break-after: avoid; }
+}
