@@ -3,6 +3,7 @@ import "dotenv/config";
 import { closeDatabase } from "../server/db/client";
 import { syncOutcomes } from "../server/domain/outcome-store";
 import { syncTopicOutcomeMappings, syncTopics } from "../server/domain/topic-store";
+import { syncCentres } from "../server/domain/centre-store";
 
 /**
  * The release-time content sync, run by the migration task on every deploy
@@ -21,9 +22,11 @@ try {
   const codes = await syncOutcomes();
   const topicCount = await syncTopics();
   const mappingCount = await syncTopicOutcomeMappings();
+  const centreCount = await syncCentres();
   console.info(`Upserted ${codes.length} MEB outcome(s): ${codes.join(", ")}.`);
   console.info(`Upserted ${topicCount} workshop topic(s).`);
   console.info(`Linked ${mappingCount} topic-outcome mapping(s), all pending verification.`);
+  console.info(`Upserted ${centreCount} centre(s) with published facility claims.`);
 } finally {
   await closeDatabase();
 }

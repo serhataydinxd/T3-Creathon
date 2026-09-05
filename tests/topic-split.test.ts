@@ -38,14 +38,16 @@ describe("topic identity", () => {
 
 describe("the migration that separates them", () => {
   const dir = new URL("../server/db/migrations/", import.meta.url);
-  // Only the migration this change introduces. Earlier ones legitimately
-  // dropped columns; the additive constraint is about not breaking packages
-  // that are already saved, which is a property of the new step alone.
-  const latest = readdirSync(dir)
-    .filter((name) => name.endsWith(".sql"))
-    .sort()
-    .at(-1)!;
-  const sql = readFileSync(new URL(latest, dir), "utf8");
+  // Named, not "the latest". These assertions are about the migration that
+  // introduced the split; a later one is a different change with its own
+  // properties, and pinning to the end of the list made this rot the moment
+  // another migration landed.
+  const SPLIT_MIGRATION = "0003_nappy_hex.sql";
+  const sql = readFileSync(new URL(SPLIT_MIGRATION, dir), "utf8");
+
+  it("is still the migration this test describes", () => {
+    expect(readdirSync(dir)).toContain(SPLIT_MIGRATION);
+  });
 
   it("is additive: it creates the new tables without dropping anything", () => {
     expect(sql).toContain('CREATE TABLE "topics"');

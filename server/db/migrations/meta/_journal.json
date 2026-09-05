@@ -29,6 +29,13 @@
       "when": 1788598415048,
       "tag": "0003_nappy_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788606455161,
+      "tag": "0004_bent_blob",
+      "breakpoints": true
     }
   ]
 }

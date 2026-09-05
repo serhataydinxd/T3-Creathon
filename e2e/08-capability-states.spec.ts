@@ -21,10 +21,7 @@ test("an unpublished facility leaves a route uncertain rather than rejected", as
   await page.getByTestId("venue-select").selectOption("corum");
 
   // The centre publishes nothing about the dome, so the profile says unknown.
-  await expect(page.getByTestId("capability-planetarium-unknown")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(page.getByTestId("capability-planetarium-unknown")).toBeChecked();
   await expect(page.getByTestId("unpublished-note")).toContainText("bilinmiyor");
 
   await page.getByTestId("generate-submit").click();

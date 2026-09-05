@@ -149,6 +149,81 @@ export const topicOutcomeMappings = pgTable(
   (table) => [uniqueIndex("topic_outcome_idx").on(table.topicId, table.objectiveId)],
 );
 
+/**
+ * Whether a facility or stock item is there. The third state is the reason
+ * these tables exist: silence has to be storable as silence.
+ */
+export const facilityStatus = pgEnum("facility_status", ["available", "unavailable", "unknown"]);
+
+/**
+ * Operational centre data, as opposed to the static research transcription in
+ * server/content/venues.ts.
+ *
+ * The static file records what Bilim Türkiye has published. These tables record
+ * what people working at a centre have since established — which is a different
+ * and more current thing, and the only kind of claim that may ever produce
+ * `unavailable`.
+ */
+export const centres = pgTable("centres", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /** Matches the key in the static registry, so the two can be reconciled. */
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  location: text("location").notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * One facility at one centre, with how its status came to be known.
+ *
+ * Provenance is not decoration here. "The centre's page named a planetarium in
+ * September" and "an educator stood in the building last week and there is no
+ * dome" are both `available`/`unavailable`, and a trainer deciding whether to
+ * trust it needs to know which.
+ */
+export const centreCapabilities = pgTable(
+  "centre_capabilities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    centreId: uuid("centre_id").notNull().references(() => centres.id),
+    capability: text("capability").notNull(),
+    status: facilityStatus("status").notNull().default("unknown"),
+    /** Where a published claim came from; null when a person verified it. */
+    sourceUrl: text("source_url"),
+    /** Who checked, when they are the authority rather than a page. */
+    verifiedBy: uuid("verified_by").references(() => users.id),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    note: text("note"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("centre_capability_idx").on(table.centreId, table.capability)],
+);
+
+/**
+ * What a centre actually holds, and how much of it.
+ *
+ * Quantities are per centre rather than per session: the generator still costs
+ * a session from the profile the trainer submits, and this is the standing
+ * record that profile can be filled from.
+ */
+export const centreInventory = pgTable(
+  "centre_inventory",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    centreId: uuid("centre_id").notNull().references(() => centres.id),
+    materialId: text("material_id").notNull(),
+    status: facilityStatus("status").notNull().default("unknown"),
+    quantity: integer("quantity"),
+    unit: text("unit"),
+    verifiedBy: uuid("verified_by").references(() => users.id),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    note: text("note"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("centre_material_idx").on(table.centreId, table.materialId)],
+);
+
 export const generationRuns = pgTable(
   "generation_runs",
   {

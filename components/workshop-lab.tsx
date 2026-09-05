@@ -45,7 +45,6 @@ import {
   VENUE_CAPABILITY_IDS,
   confirmedCapabilities,
   unavailableCapabilities,
-  unknownCapabilities,
   type CentreId,
 } from "@/server/content/venues";
 import { FORMATS, FORMAT_IDS, getFormat } from "@/server/content/formats";
@@ -68,7 +67,18 @@ const CAPABILITY_CHOICES: readonly { value: CapabilityChoice; label: string }[] 
   { value: "unknown", label: "Bilinmiyor" },
 ];
 
-export function WorkshopLab({ live = false }: { live?: boolean }) {
+export function WorkshopLab({
+  live = false,
+  centreStatuses = {},
+}: {
+  live?: boolean;
+  /**
+   * Live facility status per centre, from the operational record. Defaulted to
+   * empty rather than required so the component still renders in isolation;
+   * an absent centre simply falls back to the published research.
+   */
+  centreStatuses?: Record<string, Record<string, CapabilityChoice>>;
+}) {
   const router = useRouter();
   const [view, setView] = useState<View>("configure");
   const [profile, setProfile] = useState<ResourceProfile>(DEFAULT_PROFILE);
@@ -91,6 +101,11 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
   const selectedOutcome = CURRICULUM[(profile.outcomeId ?? OUTCOME_IDS[0]) as keyof typeof CURRICULUM];
   const isProposal = proposalEntry !== null;
   const catalogueEntries = catalogueEntriesFor(domainId, cohort);
+  // Derived from the profile rather than the research file, so the note agrees
+  // with what the plan will actually do — including after a verification.
+  const unsettledCapabilities = VENUE_CAPABILITY_IDS.filter(
+    (capability) => capabilityStatus(profile, capability) === "unknown",
+  );
   const authoredHere = catalogueEntries.filter((entry) =>
     AUTHORED_BY_CATALOGUE_ENTRY.has(entry.id),
   ).length;
@@ -359,19 +374,33 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
                 onChange={(event) => {
                   const value = event.target.value;
                   setVenueId(value);
-                  // Only what the source actually establishes. A centre's
+                  // Only what a source actually establishes. A centre's
                   // unpublished facility stays unknown; a school classroom's
                   // absence of one is a verified fact about school classrooms.
+                  // The operational record wins over the research file, so a
+                  // verification made on the Merkez ve envanter page applies.
+                  const statuses =
+                    value === "school"
+                      ? null
+                      : (centreStatuses[value] ?? {
+                          ...Object.fromEntries(
+                            confirmedCapabilities(value as CentreId).map((id) => [id, "available"]),
+                          ),
+                          ...Object.fromEntries(
+                            unavailableCapabilities(value as CentreId).map((id) => [
+                              id,
+                              "unavailable",
+                            ]),
+                          ),
+                        });
                   setProfile((current) => ({
                     ...current,
-                    capabilities:
-                      value === "school"
-                        ? [...SCHOOL_CLASSROOM.capabilities]
-                        : confirmedCapabilities(value as CentreId),
-                    unavailableCapabilities:
-                      value === "school"
-                        ? [...SCHOOL_CLASSROOM.unavailableCapabilities]
-                        : unavailableCapabilities(value as CentreId),
+                    capabilities: statuses
+                      ? VENUE_CAPABILITY_IDS.filter((id) => statuses[id] === "available")
+                      : [...SCHOOL_CLASSROOM.capabilities],
+                    unavailableCapabilities: statuses
+                      ? VENUE_CAPABILITY_IDS.filter((id) => statuses[id] === "unavailable")
+                      : [...SCHOOL_CLASSROOM.unavailableCapabilities],
                   }));
                 }}
               >
@@ -384,10 +413,10 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
                   ))}
                 </optgroup>
               </select>
-              {venueId !== "school" && unknownCapabilities(venueId as CentreId).length > 0 && (
+              {venueId !== "school" && unsettledCapabilities.length > 0 && (
                 <p className="panel-help" data-testid="unpublished-note">
                   Bu merkez için donanım durumu bilinmiyor:{" "}
-                  {unknownCapabilities(venueId as CentreId)
+                  {unsettledCapabilities
                     .map((capability) => VENUE_CAPABILITIES[capability].label)
                     .join(", ")}
                   . Bilinmemesi yok anlamına gelmez; aşağıdan &quot;Var&quot; ya da
@@ -398,29 +427,36 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
                 {VENUE_CAPABILITY_IDS.map((capability) => {
                   const status = capabilityStatus(profile, capability);
                   return (
-                    <div className="capability" key={capability}>
-                      <span title={VENUE_CAPABILITIES[capability].description}>
+                    /*
+                     * A radio group, not three toggle buttons. The states are
+                     * mutually exclusive, so radios are what they are — and it
+                     * matters for keyboard users: a group is a single tab stop
+                     * navigated with arrows, where nine buttons pushed the
+                     * generate action past sixty stops.
+                     */
+                    <fieldset className="capability" key={capability}>
+                      <legend title={VENUE_CAPABILITIES[capability].description}>
                         {VENUE_CAPABILITIES[capability].label}
-                      </span>
-                      <div
-                        className="capability-choice"
-                        role="group"
-                        aria-label={`${VENUE_CAPABILITIES[capability].label} durumu`}
-                      >
+                      </legend>
+                      <div className="capability-choice">
                         {CAPABILITY_CHOICES.map((choice) => (
-                          <button
+                          <label
                             key={choice.value}
-                            type="button"
-                            data-testid={`capability-${capability}-${choice.value}`}
-                            aria-pressed={status === choice.value}
                             className={status === choice.value ? "chip selected" : "chip"}
-                            onClick={() => setCapabilityStatus(capability, choice.value)}
                           >
+                            <input
+                              type="radio"
+                              name={`capability-${capability}`}
+                              value={choice.value}
+                              checked={status === choice.value}
+                              data-testid={`capability-${capability}-${choice.value}`}
+                              onChange={() => setCapabilityStatus(capability, choice.value)}
+                            />
                             {choice.label}
-                          </button>
+                          </label>
                         ))}
                       </div>
-                    </div>
+                    </fieldset>
                   );
                 })}
               </div>

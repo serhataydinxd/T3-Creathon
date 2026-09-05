@@ -5,6 +5,7 @@ import { closeDatabase, getDb } from "../server/db/client";
 import { users } from "../server/db/schema";
 import { syncOutcomes } from "../server/domain/outcome-store";
 import { syncTopicOutcomeMappings, syncTopics } from "../server/domain/topic-store";
+import { syncCentres } from "../server/domain/centre-store";
 
 const demoPassword = process.env.DEMO_PASSWORD ?? "I.mkanDemo!2026";
 const passwordHash = await hashPassword(demoPassword);
@@ -30,8 +31,10 @@ const codes = await syncOutcomes();
 // Topics too, so a draft for any published catalogue topic can be saved.
 const catalogueTopics = await syncTopics();
 await syncTopicOutcomeMappings();
+// Centres too: the lab and the centre record both read the operational rows.
+const centreCount = await syncCentres();
 
 await closeDatabase();
 console.info(
-  `Seeded ${seedUsers.length} role accounts, ${codes.length} approved outcome(s) and ${catalogueTopics} workshop topic(s).`,
+  `Seeded ${seedUsers.length} role accounts, ${codes.length} outcome(s), ${catalogueTopics} topic(s) and ${centreCount} centre(s).`,
 );

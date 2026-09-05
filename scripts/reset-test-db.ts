@@ -21,6 +21,6 @@ if (safePglite) {
 
 const db = getDb();
 await migrateDatabase();
-await db.execute(sql`TRUNCATE TABLE educator_feedback, version_transitions, reviews, workshop_versions, generation_stages, generation_runs, sessions, objectives, users RESTART IDENTITY CASCADE`);
+await db.execute(sql`TRUNCATE TABLE educator_feedback, version_transitions, reviews, workshop_versions, generation_stages, generation_runs, sessions, topic_outcome_mappings, topics, centre_capabilities, centre_inventory, centres, objectives, users RESTART IDENTITY CASCADE`);
 await closeDatabase();
 console.info("Test database reset complete. Run db:seed next.");
