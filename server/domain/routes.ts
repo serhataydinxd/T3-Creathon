@@ -4,6 +4,7 @@ import {
   STAGE_KEYS,
   getOutcomeContent,
   type OutcomeId,
+  type WorkshopTopic,
   type RouteDefinition,
   type StageBlueprint,
   type StageKey,
@@ -93,7 +94,19 @@ export type RouteSelection = {
  * invariant is asserted in the corpus tests rather than handled at run time.
  */
 export function selectRoute(outcomeId: OutcomeId, profile: ResourceProfile): RouteSelection {
-  const routes = [...getOutcomeContent(outcomeId).routes].sort(
+  return selectRouteForTopic(getOutcomeContent(outcomeId), profile);
+}
+
+/**
+ * The same selection against a topic that may not be in the corpus. A proposal
+ * for an unauthored catalogue entry is a WorkshopTopic like any other, so it
+ * goes through identical eligibility rules rather than a lenient side path.
+ */
+export function selectRouteForTopic(
+  topic: WorkshopTopic,
+  profile: ResourceProfile,
+): RouteSelection {
+  const routes = [...topic.routes].sort(
     (a, b) => ROUTE_TIER_ORDER.indexOf(a.tier) - ROUTE_TIER_ORDER.indexOf(b.tier),
   );
   const rejected: RouteRejection[] = [];
@@ -105,15 +118,15 @@ export function selectRoute(outcomeId: OutcomeId, profile: ResourceProfile): Rou
     }
     return { route, rejected };
   }
-  throw new Error(`NO_ELIGIBLE_ROUTE:${outcomeId}`);
+  throw new Error(`NO_ELIGIBLE_ROUTE:${topic.catalogueEntryId ?? topic.title}`);
 }
 
 function resolveBlueprint(
-  outcomeId: OutcomeId,
+  topic: WorkshopTopic,
   route: RouteDefinition,
   key: StageKey,
 ): StageBlueprint {
-  const base = getOutcomeContent(outcomeId).baseStages[key];
+  const base = topic.baseStages[key];
   const override = route.stageOverrides?.[key];
   return override ? { ...base, ...override } : base;
 }
@@ -134,9 +147,17 @@ export function buildStages(
   route: RouteDefinition,
   profile: ResourceProfile,
 ): Stage[] {
+  return buildStagesForTopic(getOutcomeContent(outcomeId), route, profile);
+}
+
+export function buildStagesForTopic(
+  topic: WorkshopTopic,
+  route: RouteDefinition,
+  profile: ResourceProfile,
+): Stage[] {
   const minutes = allocateMinutes(profile.durationMinutes);
   return STAGE_KEYS.map((key, index) => {
-    const blueprint = resolveBlueprint(outcomeId, route, key);
+    const blueprint = resolveBlueprint(topic, route, key);
     return {
       key,
       name: STAGE_IDENTITY[key].name,

@@ -41,3 +41,9 @@ docs/fill.py
 
 # Agent worktrees, created locally by background agents
 .claude/worktrees/
+
+# Bilim Türkiye catalogue captures: source screenshots kept local, since
+# redistributing another organisation's page images is their call. The
+# link.txt citations beside them are tracked, and the transcription itself
+# lives in server/content/catalogue.ts with its source URLs and capture date.
+docs/atolye/**/*.png

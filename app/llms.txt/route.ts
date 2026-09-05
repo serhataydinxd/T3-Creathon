@@ -1,4 +1,6 @@
 import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "@/server/site";
+import { CATALOGUE_ENTRIES, catalogueCoverage } from "@/server/content/catalogue";
+import { CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
 
 const REPOSITORY = "https://github.com/serhataydinxd/T3-Creathon";
 
@@ -8,6 +10,9 @@ const REPOSITORY = "https://github.com/serhataydinxd/T3-Creathon";
  * every link stays anchored to the deployment's own origin.
  */
 function build(): string {
+  // Coverage is computed, never written down: a brief that overstates what the
+  // corpus holds is worse than no brief at all.
+  const coverage = catalogueCoverage(OUTCOME_IDS.map((id) => CURRICULUM[id]));
   return `# ${SITE_NAME}
 
 > ${SITE_DESCRIPTION}
@@ -49,10 +54,15 @@ bunu bir uyarı olarak bildirir.
 
 ## Korpus
 
-- 7 atölye konusu, Bilim Türkiye'nin yedi atölye temasından üçünü kapsıyor
-  (Astronomi ve Uzay, Teknoloji, Doğa Bilimleri). Matematik, Girişim, Tasarım
-  ve Tarım Teknolojileri temaları için içerik henüz yok.
-- Her konu için en az iki rota; toplam 16 rota.
+- Bilim Türkiye'nin yayımlanmış atölye kataloğu tam olarak modellenmiştir:
+  yedi tema, üç yaş grubu, ${CATALOGUE_ENTRIES.length} konu, kaynak sayfalarıyla.
+- Bu konuların ${coverage.entriesAuthored} tanesi için İMKÂN'da onaylı içerik
+  vardır (${coverage.themesAuthored}/${coverage.themesTotal} tema,
+  ${coverage.cohortsAuthored}/${coverage.cohortsTotal} yaş grubu); geri kalanı
+  için içerik henüz yok. Onaylı içeriği olmayan bir konu seçildiğinde İMKÂN
+  pedagog onayına giren bir taslak öneri üretir ve bunu onaylı içerik gibi
+  sunmaz.
+- Onaylı konuların her biri için en az iki rota; toplam 16 rota.
 - 26 malzeme, Türkiye perakende fiyatı ve fiyat tarihiyle.
 - 30 bilim merkezi, merkez sayfalarında yayımlanan donanımıyla. Yayımlanmamış
   donanım "yok" sayılmaz.

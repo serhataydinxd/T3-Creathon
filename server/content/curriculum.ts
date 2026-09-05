@@ -120,6 +120,15 @@ export type CurriculumMapping = {
 export type WorkshopTopic = {
   domainId: WorkshopDomainId;
   cohort: AgeCohortId;
+  /**
+   * The published Bilim Türkiye catalogue entry this topic authors a session
+   * for, or null when the catalogue lists no counterpart for this cohort.
+   *
+   * Required rather than optional, and nullable rather than absent, because
+   * "we checked and it is not on their list" and "nobody looked" are different
+   * facts and only one of them is acceptable to leave in the corpus.
+   */
+  catalogueEntryId: string | null;
   title: string;
   /** One sentence a trainer could read out to describe the session. */
   summary: string;
@@ -144,6 +153,7 @@ const TYMM = {
 const SPACE_AGE: WorkshopTopic = {
   domainId: "astronomy-aviation-space",
   cohort: "12-14",
+  catalogueEntryId: "astronomy-aviation-space:12-14:uzay-teknolojileri",
   summary:
     "Uzay gözlem araçlarını modelleyerek gök bilimi araçlarının işleyişini kavratır.",
   curriculumMapping: {
@@ -273,8 +283,9 @@ const SPACE_AGE: WorkshopTopic = {
 };
 
 const FORCE_AND_ENERGY: WorkshopTopic = {
-  domainId: "technology",
+  domainId: "natural-sciences",
   cohort: "12-14",
+  catalogueEntryId: "natural-sciences:12-14:kuvvet-enerji-iliskisi",
   summary:
     "Kinetik ve potansiyel enerjiyi ölçüm yaparak karşılaştırtır.",
   curriculumMapping: {
@@ -370,6 +381,7 @@ const FORCE_AND_ENERGY: WorkshopTopic = {
 const BODY_SYSTEMS: WorkshopTopic = {
   domainId: "natural-sciences",
   cohort: "12-14",
+  catalogueEntryId: "natural-sciences:12-14:vucudumuzdaki-sistemler",
   summary:
     "Sindirim sistemini model üzerinde izleyerek yapı ve görev ilişkisini kurdurur.",
   curriculumMapping: {
@@ -469,6 +481,7 @@ const BODY_SYSTEMS: WorkshopTopic = {
 const LIGHT_AND_LENSES: WorkshopTopic = {
   domainId: "natural-sciences",
   cohort: "12-14",
+  catalogueEntryId: "natural-sciences:12-14:optik",
   summary:
     "Işığın ortam değiştirirken izlediği yolu gözleterek kırılma çıkarımı yaptırır.",
   curriculumMapping: {
@@ -569,6 +582,7 @@ const LIGHT_AND_LENSES: WorkshopTopic = {
 const NATURE_OF_MATTER: WorkshopTopic = {
   domainId: "natural-sciences",
   cohort: "12-14",
+  catalogueEntryId: "natural-sciences:12-14:atomlar-ve-molekuller",
   summary:
     "Farklı moleküllerin modelini kurdurarak maddenin yapısını görünür kılar.",
   curriculumMapping: {
@@ -688,8 +702,9 @@ const NATURE_OF_MATTER: WorkshopTopic = {
 };
 
 const ELECTRIFICATION: WorkshopTopic = {
-  domainId: "technology",
+  domainId: "natural-sciences",
   cohort: "12-14",
+  catalogueEntryId: "natural-sciences:12-14:elektrik-ve-magnetizma",
   summary:
     "Sürtme, dokunma ve etki ile elektriklenmeyi deneyle ayırt ettirir.",
   curriculumMapping: {
@@ -793,6 +808,7 @@ const ELECTRIFICATION: WorkshopTopic = {
 const SUSTAINABLE_LIFE: WorkshopTopic = {
   domainId: "natural-sciences",
   cohort: "12-14",
+  catalogueEntryId: null,
   summary:
     "Besin zincirindeki ilişkileri kartlarla yapılandırtır.",
   curriculumMapping: {
@@ -914,4 +930,22 @@ export function isOutcomeId(value: string): value is OutcomeId {
 /** Every route in the corpus, for counters and matrix tests. */
 export const ALL_ROUTES = OUTCOME_IDS.flatMap((outcomeId) =>
   CURRICULUM[outcomeId].routes.map((route) => ({ outcomeId, route })),
+);
+
+/**
+ * Which authored topic implements a published catalogue entry.
+ *
+ * Built from the corpus so it cannot claim coverage the corpus does not have:
+ * an entry is in this map only because a topic declares it.
+ */
+export const AUTHORED_BY_CATALOGUE_ENTRY: ReadonlyMap<string, OutcomeId> = new Map(
+  OUTCOME_IDS.flatMap((outcomeId) => {
+    const entryId = CURRICULUM[outcomeId].catalogueEntryId;
+    return entryId ? ([[entryId, outcomeId]] as [string, OutcomeId][]) : [];
+  }),
+);
+
+/** Authored topics the published catalogue lists no counterpart for. */
+export const UNLISTED_OUTCOME_IDS = OUTCOME_IDS.filter(
+  (outcomeId) => CURRICULUM[outcomeId].catalogueEntryId === null,
 );

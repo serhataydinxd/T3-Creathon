@@ -24,10 +24,17 @@ import {
   ZapOff,
 } from "lucide-react";
 import { MaterialLedger } from "@/components/material-ledger";
+import { planContext } from "@/components/plan-context";
 import { DEFAULT_PROFILE, validateProfile } from "@/server/domain/generator";
 import { INVENTORY_PRESETS, INVENTORY_PRESET_IDS, MATERIAL_OPTIONS } from "@/server/content/materials";
-import { CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
-import { AGE_COHORTS, WORKSHOP_DOMAINS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
+import {
+  AUTHORED_BY_CATALOGUE_ENTRY,
+  CURRICULUM,
+  OUTCOME_IDS,
+  UNLISTED_OUTCOME_IDS,
+} from "@/server/content/curriculum";
+import { catalogueEntriesFor, getCatalogueEntry } from "@/server/content/catalogue";
+import { AGE_COHORTS, AGE_COHORT_IDS, WORKSHOP_DOMAINS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
 import {
   CENTRES,
   CENTRE_IDS,
@@ -39,6 +46,8 @@ import {
   type CentreId,
 } from "@/server/content/venues";
 import { FORMATS, FORMAT_IDS, getFormat } from "@/server/content/formats";
+import { isOutcomeId } from "@/server/content/curriculum";
+import type { AgeCohortId, WorkshopDomainId } from "@/server/content/domains";
 import type { MaterialKey, ResourceProfile, WorkshopPlan } from "@/server/domain/types";
 
 type View = "configure" | "generating" | "result";
@@ -57,7 +66,36 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
   const [activeStage, setActiveStage] = useState(0);
   const [venueId, setVenueId] = useState<string>("school");
   const selectedFormat = getFormat(profile.formatId);
+  // The lab opens on the catalogue tab holding whatever topic is selected, so
+  // the trainer lands where their default topic actually lives.
+  const defaultEntry = CURRICULUM[(profile.outcomeId ?? OUTCOME_IDS[0]) as keyof typeof CURRICULUM];
+  const [domainId, setDomainId] = useState<WorkshopDomainId>(defaultEntry.domainId);
+  const [cohort, setCohort] = useState<AgeCohortId>(defaultEntry.cohort);
+  const proposalEntry = profile.proposalEntryId ? getCatalogueEntry(profile.proposalEntryId) : null;
   const selectedOutcome = CURRICULUM[(profile.outcomeId ?? OUTCOME_IDS[0]) as keyof typeof CURRICULUM];
+  const isProposal = proposalEntry !== null;
+  const catalogueEntries = catalogueEntriesFor(domainId, cohort);
+  const authoredHere = catalogueEntries.filter((entry) =>
+    AUTHORED_BY_CATALOGUE_ENTRY.has(entry.id),
+  ).length;
+
+  /**
+   * Selecting a topic sets exactly one of the two identifiers, never both: a
+   * catalogue entry İMKÂN has authored resolves to its corpus outcome, and any
+   * other entry becomes a proposal for the assistant to draft.
+   */
+  function selectTopic(value: string) {
+    const authored = AUTHORED_BY_CATALOGUE_ENTRY.get(value);
+    setProfile((current) => ({
+      ...current,
+      outcomeId: authored ?? (isOutcomeId(value) ? value : current.outcomeId),
+      proposalEntryId: authored || isOutcomeId(value) ? undefined : value,
+    }));
+  }
+
+  const selectedTopicValue = proposalEntry
+    ? proposalEntry.id
+    : selectedOutcome.catalogueEntryId ?? (profile.outcomeId ?? OUTCOME_IDS[0]);
   const profileFindings = validateProfile(profile);
   const profileBlocked = profileFindings.some((finding) => finding.severity === "blocker");
 
@@ -123,7 +161,7 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
     }
   }
 
-  if (view === "generating") return <GeneratingView />;
+  if (view === "generating") return <GeneratingView live={live} proposal={isProposal} />;
   if (view === "configure") {
     return (
       <section className="page lab-page">
@@ -137,31 +175,85 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
             {generationError && <div className="error-notice" role="alert"><CircleAlert />{generationError}</div>}
             <section className="panel objective-panel">
               <div className="panel-kicker"><LockKeyhole size={17} /> 01 · Konu Kilidi</div>
+              <p className="panel-help">
+                Konu listesi Bilim Türkiye&apos;nin yayımlanmış atölye kataloğudur. İMKÂN&apos;ın
+                onaylı içeriği olan konular doğrudan uyarlanır; olmayanlar için pedagog
+                incelemesine girecek bir taslak önerilir.
+              </p>
+              <div className="inline-fields">
+                <label>
+                  <span>Atölye teması</span>
+                  <select
+                    data-testid="domain-select"
+                    value={domainId}
+                    onChange={(event) => setDomainId(event.target.value as WorkshopDomainId)}
+                  >
+                    {WORKSHOP_DOMAIN_IDS.map((id) => (
+                      <option key={id} value={id}>{WORKSHOP_DOMAINS[id].label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Yaş grubu</span>
+                  <select
+                    data-testid="cohort-select"
+                    value={cohort}
+                    onChange={(event) => setCohort(event.target.value as AgeCohortId)}
+                  >
+                    {AGE_COHORT_IDS.map((id) => (
+                      <option key={id} value={id}>{AGE_COHORTS[id].label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <label className="field-label" htmlFor="outcome-select">Atölye konusu</label>
               <select
                 id="outcome-select"
                 data-testid="outcome-select"
                 className="outcome-select"
-                value={profile.outcomeId ?? OUTCOME_IDS[0]}
-                onChange={(event) => update("outcomeId", event.target.value)}
+                value={selectedTopicValue}
+                onChange={(event) => selectTopic(event.target.value)}
               >
-                {WORKSHOP_DOMAIN_IDS.filter((domainId) =>
-                  OUTCOME_IDS.some((id) => CURRICULUM[id].domainId === domainId),
-                ).map((domainId) => (
-                  <optgroup key={domainId} label={WORKSHOP_DOMAINS[domainId].label}>
-                    {OUTCOME_IDS.filter((id) => CURRICULUM[id].domainId === domainId).map((id) => (
+                <optgroup label={`${WORKSHOP_DOMAINS[domainId].shortLabel} · ${AGE_COHORTS[cohort].label} · ${catalogueEntries.length} konu`}>
+                  {catalogueEntries.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.title}
+                      {AUTHORED_BY_CATALOGUE_ENTRY.has(entry.id)
+                        ? " · onaylı içerik"
+                        : " · taslak önerilecek"}
+                    </option>
+                  ))}
+                </optgroup>
+                {UNLISTED_OUTCOME_IDS.length > 0 && (
+                  <optgroup label="İMKÂN içeriği · katalogda listelenmiyor">
+                    {UNLISTED_OUTCOME_IDS.map((id) => (
                       <option key={id} value={id}>
                         {CURRICULUM[id].title} · {AGE_COHORTS[CURRICULUM[id].cohort].label}
                       </option>
                     ))}
                   </optgroup>
-                ))}
+                )}
               </select>
               <div className="locked-select" data-testid="objective-lock-preview">
-                <span><small>{WORKSHOP_DOMAINS[selectedOutcome.domainId].shortLabel}</small> {selectedOutcome.summary}</span>
+                <span>
+                  <small>
+                    {isProposal
+                      ? `${WORKSHOP_DOMAINS[proposalEntry.domainId].shortLabel} · TASLAK`
+                      : WORKSHOP_DOMAINS[selectedOutcome.domainId].shortLabel}
+                  </small>
+                  {isProposal
+                    ? `${proposalEntry.title} — katalogda yayımlanmış, onaylı içeriği henüz yok.`
+                    : selectedOutcome.summary}
+                </span>
                 <LockKeyhole size={18} />
               </div>
-              {selectedOutcome.curriculumMapping ? (
+              {isProposal ? (
+                <p className="panel-help" data-testid="proposal-notice">
+                  İMKÂN bu konu için bir <b>taslak öneri</b> üretir. Oturum, pedagog onayı
+                  alana kadar uygulanmamalıdır; onaylandığında korpusa onaylı içerik olarak
+                  girer.
+                </p>
+              ) : selectedOutcome.curriculumMapping ? (
                 <p className="panel-help" data-testid="curriculum-mapping">
                   Okul kazanımıyla tamamlayıcılık: <b>{selectedOutcome.curriculumMapping.code}</b> —{" "}
                   {selectedOutcome.curriculumMapping.canonicalText}
@@ -172,16 +264,18 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
               ) : (
                 <p className="panel-help">Bu konu için okul kazanımı tamamlayıcılığı tanımlı değil.</p>
               )}
+              <p className="panel-help" data-testid="catalogue-coverage">
+                Bu sekmede {catalogueEntries.length} yayımlanmış konu var; {authoredHere} tanesinin
+                İMKÂN&apos;da onaylı içeriği bulunuyor.
+              </p>
               <div className="inline-fields">
-                <label><span>Yaş grubu</span><select defaultValue={selectedOutcome.cohort}><option>{AGE_COHORTS[selectedOutcome.cohort].label}</option></select></label>
                 <label><span>Pedagoji iskeleti</span><select defaultValue="5e" data-testid="pedagogy-select"><option value="5e">5E Öğrenme Döngüsü (İMKÂN)</option></select></label>
-              
+              </div>
               <p className="panel-help">
                 5E, İMKÂN&apos;ın kullandığı aşama iskeletidir. Bilim Türkiye&apos;nin kendi
                 yaklaşımı “Yaparak Yaşayarak Öğrenme” ve proje tabanlı çalışmadır; bu
                 iskelet onun yerine geçmez, oturumu ölçülebilir aşamalara böler.
               </p>
-            </div>
             </section>
 
             <section className="panel">
@@ -324,7 +418,7 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
             </dl>
             <div className="safety-note"><ShieldCheck /><div><strong>Güvenlik filtresi açık</strong><p>Yalnızca yaşa ve koşullara uygun, önceden onaylı etkinlik şablonları kullanılacak.</p></div></div>
             <button data-testid="generate-submit" className="button primary wide" type="button" disabled={profileBlocked} onClick={createPlan}>Atölyeyi üret <Sparkles size={18} /></button>
-            <p className="microcopy">Kazanım metni üretim sırasında değiştirilemez.</p>
+            <p className="microcopy">Atölye konusu üretim sırasında değiştirilemez.</p>
           </aside>
         </div>
       </section>
@@ -337,14 +431,23 @@ export function WorkshopLab({ live = false }: { live?: boolean }) {
   return <ResultView plan={plan} activeStage={activeStage} setActiveStage={setActiveStage} setView={setView} onSave={saveDraft} saving={saving} saveError={saveError} />;
 }
 
-function GeneratingView() {
-  const steps = ["Kazanım sürümü kilitlendi", "Uyumsuz şablonlar elendi", "5E akışı dengelendi", "Güvenlik ve bütçe doğrulanıyor"];
+function GeneratingView({ live, proposal }: { live: boolean; proposal: boolean }) {
+  const steps = [
+    "Atölye konusu kilitlendi",
+    "Uyumsuz rotalar elendi",
+    "5E akışı dengelendi",
+    "Güvenlik ve bütçe doğrulanıyor",
+  ];
   return (
     <section className="generation-screen" data-testid="generating-indicator" aria-live="polite">
       <div className="generator-orb"><Sparkles /><span className="orbit orbit-one" /><span className="orbit orbit-two" /></div>
-      <span className="overline">REPLAY üretim motoru</span>
-      <h1>Atölye gerçek koşullara uyarlanıyor…</h1>
-      <p>Aynı kazanımı koruyarak güvenli ve uygulanabilir bir rota oluşturuyoruz.</p>
+      <span className="overline">{live ? "CANLI ÜRETİM motoru" : "REPLAY üretim motoru"}</span>
+      <h1>{proposal ? "Konu için taslak oturum yazılıyor…" : "Atölye gerçek koşullara uyarlanıyor…"}</h1>
+      <p>
+        {proposal
+          ? "Katalogdaki konu sabit tutularak, eldeki imkânlarla uygulanabilir bir taslak kuruluyor."
+          : "Aynı atölye konusunu koruyarak güvenli ve uygulanabilir bir rota oluşturuyoruz."}
+      </p>
       <div className="generation-steps">{steps.map((step, i) => <div className={i < 3 ? "done" : "working"} key={step}><i>{i < 3 ? <Check size={13} /> : <RefreshCcw size={13} />}</i><span>{step}</span></div>)}</div>
     </section>
   );
@@ -370,14 +473,22 @@ function ResultView({ plan, activeStage, setActiveStage, setView, onSave, saving
       {saveError && <div className="error-notice" role="alert"><CircleAlert /> {saveError}</div>}
 
       <header className="plan-title">
-        <div><span className="overline">Fen bilimleri · 7. sınıf · 5E</span><h1>{plan.title}</h1><p>{plan.adaptationSummary}</p></div>
+        <div>
+          <span className="overline">{planContext(plan)}</span>
+          <h1>{plan.title}</h1>
+          <p>{plan.adaptationSummary}</p>
+        </div>
         <div className="plan-metrics"><div><Clock3 /><strong>{plan.profile.durationMinutes}</strong><span>dakika</span></div><div><Users /><strong>{plan.profile.classSize}</strong><span>öğrenci</span></div><div><WalletCards /><strong>{plan.estimatedCostTry} ₺</strong><span>tahmini</span></div></div>
       </header>
 
       <section className="objective-lock-card" data-testid="objective-lock">
         <div className="lock-symbol"><LockKeyhole /></div>
         <div><span className="overline">Konu Kilidi · {plan.objective.code}</span><blockquote>{plan.objective.canonicalText}</blockquote><small>{plan.objective.source}</small></div>
-        <span className="verified"><ShieldCheck /> Doğrulandı</span>
+        {plan.topicStatus === "proposal" ? (
+          <span className="verified pending"><CircleAlert /> Taslak öneri</span>
+        ) : (
+          <span className="verified"><ShieldCheck /> Doğrulandı</span>
+        )}
       </section>
 
       <div className="plan-grid">

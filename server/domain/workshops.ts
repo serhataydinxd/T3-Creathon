@@ -15,8 +15,8 @@ import type { AuthUser } from "@/server/auth/session";
 import type { ResourceProfile, WorkshopPlan } from "./types";
 
 import { loadGenerationRecord } from "@/server/ai/generation-record";
-import { resolveOutcomeId } from "./generator";
-import { requireOutcomeRowId } from "./outcome-store";
+import { resolveProposalEntryId, resolveTopic } from "./generator";
+import { requireTopicRowId } from "./outcome-store";
 
 export type WorkshopRecord = {
   id: string;
@@ -62,9 +62,13 @@ export async function createDraft(
   if (plan.findings.some((finding) => finding.severity === "blocker")) throw new Error("PLAN_BLOCKED");
 
   return db.transaction(async (tx) => {
-    // The plan records which corpus entry produced it, so the version is
-    // linked to that outcome rather than to whichever one happened to be first.
-    const objectiveId = await requireOutcomeRowId(tx, resolveOutcomeId(profile));
+    // The plan records which topic produced it, so the version is linked to
+    // that one rather than to whichever happened to be first. A proposal links
+    // to its published catalogue topic; an adaptation to its corpus outcome.
+    const objectiveId = await requireTopicRowId(tx, {
+      outcomeId: resolveTopic(profile).outcomeId,
+      proposalEntryId: resolveProposalEntryId(profile),
+    });
 
     const [insertedRun] = await tx
       .insert(generationRuns)

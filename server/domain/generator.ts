@@ -3,11 +3,14 @@ import {
   getOutcomeContent,
   isOutcomeId,
   type OutcomeId,
+  type WorkshopTopic,
 } from "@/server/content/curriculum";
+import { isCatalogueEntryId } from "@/server/content/catalogue";
+import { buildProposalTopic, proposalSource } from "@/server/content/proposals";
 import { MATERIALS, MATERIALS_PRICED_ON } from "@/server/content/materials";
 import { WORKSHOP_DOMAINS } from "@/server/content/domains";
 import { DEFAULT_FORMAT_ID, getFormat } from "@/server/content/formats";
-import { buildStages, selectRoute } from "./routes";
+import { buildStagesForTopic, selectRouteForTopic } from "./routes";
 import type { Finding, MaterialLine, ResourceProfile, WorkshopPlan } from "./types";
 
 /**
@@ -22,11 +25,41 @@ import type { Finding, MaterialLine, ResourceProfile, WorkshopPlan } from "./typ
  * test — it silently disables the guard — so it belongs in the same commit as
  * the change that made it necessary.
  */
-export const GENERATOR_VERSION = "2026-09-04.1";
+export const GENERATOR_VERSION = "2026-09-05.1";
 
 export function resolveOutcomeId(profile: ResourceProfile): OutcomeId {
   const requested = profile.outcomeId;
   return requested && isOutcomeId(requested) ? requested : DEFAULT_OUTCOME_ID;
+}
+
+/**
+ * A profile asks for a proposal only when it names a catalogue entry that
+ * really exists. An unknown id falls back to the authored corpus rather than
+ * failing: a stale link should show a workshop, not an error page.
+ */
+export function resolveProposalEntryId(profile: ResourceProfile): string | null {
+  const requested = profile.proposalEntryId;
+  return requested && isCatalogueEntryId(requested) ? requested : null;
+}
+
+export type TopicResolution = {
+  topic: WorkshopTopic;
+  status: "authored" | "proposal";
+  /** Present only for authored topics; a proposal has no corpus entry. */
+  outcomeId: OutcomeId | null;
+};
+
+export function resolveTopic(profile: ResourceProfile): TopicResolution {
+  const proposalEntryId = resolveProposalEntryId(profile);
+  if (proposalEntryId) {
+    return {
+      topic: buildProposalTopic(proposalEntryId, profile.materials),
+      status: "proposal",
+      outcomeId: null,
+    };
+  }
+  const outcomeId = resolveOutcomeId(profile);
+  return { topic: getOutcomeContent(outcomeId), status: "authored", outcomeId };
 }
 
 export function validateProfile(profile: ResourceProfile): Finding[] {
@@ -62,10 +95,9 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
   }
 
   const format = getFormat(profile.formatId);
-  const outcomeId = resolveOutcomeId(profile);
-  const content = getOutcomeContent(outcomeId);
-  const { route, rejected } = selectRoute(outcomeId, profile);
-  const stages = buildStages(outcomeId, route, profile);
+  const { topic: content, status: topicStatus, outcomeId } = resolveTopic(profile);
+  const { route, rejected } = selectRouteForTopic(content, profile);
+  const stages = buildStagesForTopic(content, route, profile);
   const groupCount = Math.ceil(profile.classSize / profile.groupSize);
 
   const round = (value: number) => Math.round(value * 100) / 100;
@@ -152,6 +184,14 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
       message: `Temin edilmesi gereken ${costs.acquisitionTry} ₺, ${profile.budgetTry} ₺ kesin bütçeyi aşıyor.`,
     });
   }
+  if (topicStatus === "proposal") {
+    findings.push({
+      code: "UNAUTHORED_TOPIC_PROPOSAL",
+      severity: "warning",
+      message:
+        "Bu konu Bilim Türkiye kataloğunda yayımlanmıştır ancak İMKÂN'da onaylı içeriği yoktur. Üretilen oturum bir taslak öneridir ve pedagog onayı olmadan uygulanmamalıdır.",
+    });
+  }
   if (profile.accessibilityNeeds.length > 0) {
     findings.push({
       code: "ACCESSIBILITY_ADAPTATION_APPLIED",
@@ -167,18 +207,23 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     // A topic without a curriculum mapping still locks something: its own
     // summary. The lock is about immutability during generation, not about MEB.
     objective: {
-      id: `objective-${outcomeId}`,
+      id: `objective-${outcomeId ?? content.catalogueEntryId}`,
       code: content.curriculumMapping?.code ?? WORKSHOP_DOMAINS[content.domainId].shortLabel,
       canonicalText: content.curriculumMapping?.canonicalText ?? content.summary,
+      // A proposal's authority is the catalogue page the topic name came from,
+      // not a curriculum document it has never been checked against.
       source:
-        content.curriculumMapping?.source.document ??
-        "Bilim Türkiye atölye programı",
+        topicStatus === "proposal" && content.catalogueEntryId
+          ? proposalSource(content.catalogueEntryId)
+          : content.curriculumMapping?.source.document ?? "Bilim Türkiye atölye programı",
       locked: true,
     },
     profile,
-    outcomeId,
+    outcomeId: outcomeId ?? undefined,
     domainId: content.domainId,
     cohort: content.cohort,
+    topicStatus,
+    catalogueEntryId: content.catalogueEntryId,
     formatId: format.id,
     routeId: route.id,
     routeName: route.name,

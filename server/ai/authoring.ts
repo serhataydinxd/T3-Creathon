@@ -32,10 +32,10 @@ export const authoredWorkshopSchema = z.object({
 
 export type AuthoredWorkshop = z.infer<typeof authoredWorkshopSchema>;
 
-const SYSTEM_PROMPT = `Sen Türkiye'deki MEB fen bilimleri öğretim programına göre atölye içeriği yazan bir eğitim tasarımcısısın.
+const SYSTEM_PROMPT = `Sen Bilim Türkiye bilim merkezlerinde 6-14 yaş grubuna uygulanan atölye eğitimlerinin içeriğini yazan bir eğitim tasarımcısısın.
 
 Kurallar:
-- Verilen kazanım metnini asla değiştirme, yeniden yorumlama veya genişletme.
+- Verilen atölye konusunu asla değiştirme, yeniden yorumlama veya genişletme.
 - Yalnızca sana verilen 5E aşamalarının metnini yaz. Aşama sırası, süreleri ve malzemeleri sabittir; bunları değiştirme.
 - Verilen malzeme listesinin dışında hiçbir malzeme, araç veya dijital kaynak önerme.
 - Elektrik yoksa elektrik gerektiren hiçbir etkinlik yazma. İnternet yoksa video, simülasyon veya çevrimiçi kaynak önerme.
@@ -60,7 +60,17 @@ function buildUserPrompt(profile: ResourceProfile, skeleton: WorkshopPlan): stri
     )
     .join("\n");
 
-  return `Kazanım (değiştirilemez): ${skeleton.objective.code} — ${skeleton.objective.canonicalText}
+  // A proposal has no approved session behind it, and saying so changes what
+  // the model should write: a first draft for a pedagogue to mark up, not a
+  // rendering of content someone already signed off.
+  const brief =
+    skeleton.topicStatus === "proposal"
+      ? `Atölye konusu (değiştirilemez): ${skeleton.title}
+Bu konu Bilim Türkiye kataloğunda yayımlanmıştır ancak onaylı bir oturum içeriği HENÜZ YOKTUR. Görevin, pedagog incelemesine girecek ilk taslağı yazmaktır.
+Üst düzey "title" alanına kesinlikle bu konu adını yaz; yeni bir ad uydurma.`
+      : `Kazanım (değiştirilemez): ${skeleton.objective.code} — ${skeleton.objective.canonicalText}`;
+
+  return `${brief}
 
 Sınıf koşulları:
 - Süre: ${profile.durationMinutes} dakika
@@ -105,7 +115,10 @@ export function mergeAuthoredWorkshop(
   return {
     ...skeleton,
     mode: "LIVE",
-    title: authored.title,
+    // A proposal's title is the catalogue topic name, which is the one thing
+    // it locks. The model writes the session; it does not get to rename the
+    // workshop Bilim Türkiye publishes.
+    title: skeleton.topicStatus === "proposal" ? skeleton.title : authored.title,
     adaptationSummary: authored.adaptationSummary,
     stages,
   };

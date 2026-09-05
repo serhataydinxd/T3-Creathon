@@ -3,7 +3,7 @@ import "dotenv/config";
 import { hashPassword } from "../server/auth/password";
 import { closeDatabase, getDb } from "../server/db/client";
 import { users } from "../server/db/schema";
-import { syncOutcomes } from "../server/domain/outcome-store";
+import { syncCatalogueTopics, syncOutcomes } from "../server/domain/outcome-store";
 
 const demoPassword = process.env.DEMO_PASSWORD ?? "I.mkanDemo!2026";
 const passwordHash = await hashPassword(demoPassword);
@@ -26,6 +26,10 @@ for (const seedUser of seedUsers) {
 }
 
 const codes = await syncOutcomes();
+// Published catalogue topics too, so a draft proposed for one can be saved.
+const catalogueTopics = await syncCatalogueTopics();
 
 await closeDatabase();
-console.info(`Seeded ${seedUsers.length} role accounts and ${codes.length} approved outcome(s).`);
+console.info(
+  `Seeded ${seedUsers.length} role accounts, ${codes.length} approved outcome(s) and ${catalogueTopics} catalogue topic(s).`,
+);

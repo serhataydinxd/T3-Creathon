@@ -108,6 +108,9 @@ bildirimi yöneticinin yeniden kullanım özetine düşer.
 
 Uçtan uca çalışan, herkese açık bir dikey dilim:
 
+- Bilim Türkiye'nin yayımlanmış atölye kataloğu: 7 tema × 3 yaş grubu × 183 konu
+- Onaylı içeriği olmayan katalog konuları için taslak öneri üretimi ve
+  pedagog onayına giren içerik geliştirme akışı
 - Kaynak profili formu: süre, sınıf/grup mevcudu, bütçe, elektrik, internet,
   malzeme ve erişilebilirlik
 - Dil modeliyle canlı üretim (`APP_MODE=live`) ve deterministik yedek
@@ -123,15 +126,20 @@ Uçtan uca çalışan, herkese açık bir dikey dilim:
 - Argon2id şifreleme, iptal edilebilir sunucu tabanlı oturumlar
 - HTTPS yayın, gerçek tarayıcı testleri ve erişilebilirlik denetimi
 
-**Dürüst kapsam sınırı:** korpus 7 atölye konusu ve 16 rota içerir, ancak bu
-Bilim Türkiye'nin yedi atölye temasından yalnızca **üçünü** kapsar; Matematik,
-Girişim, Tasarım ve Tarım Teknolojileri için içerik henüz yok ve ana sayfa
-sayacı bunu 3/7 olarak gösterir. Konuların okul kazanımıyla tamamlayıcılığı
-MEB'in ünite sayfalarından birebir aktarılmıştır ancak **alan uzmanı
-doğrulaması beklemektedir**. 5E, İMKÂN'ın aşama iskeletidir; Bilim
-Türkiye'nin kendi yaklaşımı "Yaparak Yaşayarak Öğrenme" ve proje tabanlı
-çalışmadır ve İMKÂN bunu uygulamaz. Çok oturumlu uzun süreli programlar
-modellenmemiştir; format seçilebilir ancak plan tek oturumu kapsadığını yazar.
+**Dürüst kapsam sınırı:** Bilim Türkiye'nin yayımlanmış atölye kataloğu tam
+olarak modellenmiştir — yedi tema, üç yaş grubu, **183 konu**, kaynak
+sayfalarıyla. Bu konuların yalnızca **6 tanesinin** İMKÂN'da onaylı içeriği
+vardır (2/7 tema, 1/3 yaş grubu: hepsi 12-14 yaş); yedinci onaylı konu olan
+"Besin Zinciri" katalogda birebir karşılığı olmadığı için katalog dışı olarak
+işaretlenmiştir. Onaylı içeriği olmayan bir konu seçildiğinde İMKÂN taslak
+öneri üretir; bu taslak her ekranda "TASLAK ÖNERİ" olarak etiketlenir ve
+pedagog onayı almadan onaylı içerik sayılmaz. Sayaçlar korpustan hesaplanır,
+elle yazılmaz. Konuların okul kazanımıyla tamamlayıcılığı MEB'in ünite
+sayfalarından birebir aktarılmıştır ancak **alan uzmanı doğrulaması
+beklemektedir**. 5E, İMKÂN'ın aşama iskeletidir; Bilim Türkiye'nin kendi
+yaklaşımı "Yaparak Yaşayarak Öğrenme" ve proje tabanlı çalışmadır ve İMKÂN
+bunu uygulamaz. Çok oturumlu uzun süreli programlar modellenmemiştir; format
+seçilebilir ancak plan tek oturumu kapsadığını yazar.
 
 ## Hızlı başlangıç
 
@@ -185,8 +193,8 @@ güçlü modele geçilebilir.
 ### Doğrulama
 
 ```bash
-npm run check      # lint + 420 birim testi + üretim derlemesi
-npm run check:all  # yukarısı + 37 tarayıcı testi
+npm run check      # lint + 444 birim testi + üretim derlemesi
+npm run check:all  # yukarısı + 39 tarayıcı testi
 ```
 
 Tarayıcı testleri Docker gerektirmez: gömülü PGlite üzerinde aynı PostgreSQL

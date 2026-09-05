@@ -1,0 +1,6 @@
+TEKNOLOJİ ATÖLYESİ
+Teknoloji Atölyeleri, öğrencilere kodlamanın temeli sayılan algoritmik düşünmeyi öğreterek kodlama becerilerini geliştirmeyi hedeflemektedir. Bunun yanı sıra çeşitli eğitim setleri kullanarak robotiğin temelini oluşturan elektronik devreleri ve mekanik sistemleri bütüncül olarak kavramalarına olanak sağlamaktadır.
+
+Proje tabanlı öğrenme yönteminin benimsendiği atölyelerimizde, öğrencilere üretim odaklı düşünme alışkanlığı da kazandırılmaktadır. Öğrenciler atölyelerde 3B tasarım, 3B yazıcı kullanımı, animasyon yapımı, mobil uygulama geliştirme, mini ev robotlarının yapımı, yenilenebilir enerji teknolojileri gibi çeşitli konuları içeren projelere dâhil olmaktadır.
+
+ https://t3bilimturkiye.org/tr/atolyeler/teknoloji-atolyesi/

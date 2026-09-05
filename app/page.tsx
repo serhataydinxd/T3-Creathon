@@ -2,8 +2,9 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock3, LockKeyhole, Sparkles, TriangleAlert } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ALL_ROUTES, CURRICULUM, OUTCOME_IDS } from "@/server/content/curriculum";
+import { catalogueCoverage } from "@/server/content/catalogue";
 import { MATERIAL_IDS } from "@/server/content/materials";
-import { AGE_COHORTS, WORKSHOP_DOMAINS, WORKSHOP_DOMAIN_IDS } from "@/server/content/domains";
+import { AGE_COHORTS, WORKSHOP_DOMAINS } from "@/server/content/domains";
 import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "@/server/site";
 
 const TIER_LABEL: Record<string, string> = {
@@ -23,13 +24,21 @@ const routeCards = ALL_ROUTES.map(({ outcomeId, route }) => {
   };
 });
 
+// Measured against Bilim Türkiye's published catalogue rather than against
+// our own corpus, so the denominator is the programme and not what we happen
+// to have written. Authoring a topic is the only thing that moves it.
+const coverage = catalogueCoverage(OUTCOME_IDS.map((id) => CURRICULUM[id]));
+
 const corpusStats = {
   topics: OUTCOME_IDS.length,
   routes: ALL_ROUTES.length,
   materials: MATERIAL_IDS.length,
-  // Honest about coverage: several Bilim Türkiye domains have no content yet.
-  domainsCovered: new Set(OUTCOME_IDS.map((id) => CURRICULUM[id].domainId)).size,
-  domainsTotal: WORKSHOP_DOMAIN_IDS.length,
+  entriesAuthored: coverage.entriesAuthored,
+  entriesTotal: coverage.entriesTotal,
+  domainsCovered: coverage.themesAuthored,
+  domainsTotal: coverage.themesTotal,
+  cohortsCovered: coverage.cohortsAuthored,
+  cohortsTotal: coverage.cohortsTotal,
 };
 
 // Structured data so search engines can render the project as a named
@@ -116,9 +125,16 @@ export default function Home() {
         <div className="stats-strip">
           <div><span className="stat-icon mint"><CheckCircle2 /></span><strong>{corpusStats.topics}</strong><small>Atölye konusu</small></div>
           <div><span className="stat-icon amber"><Sparkles /></span><strong>{corpusStats.routes}</strong><small>Kaynak duyarlı rota</small></div>
-          <div><span className="stat-icon blue"><Clock3 /></span><strong>{corpusStats.domainsCovered}/{corpusStats.domainsTotal}</strong><small>Kapsanan atölye alanı</small></div>
+          <div><span className="stat-icon blue"><Clock3 /></span><strong>{corpusStats.entriesAuthored}/{corpusStats.entriesTotal}</strong><small>Katalog konusu (onaylı içerik)</small></div>
           <div><span className="stat-icon coral"><TriangleAlert /></span><strong>5</strong><small>İzlenebilir 5E aşaması</small></div>
         </div>
+        <p className="coverage-note" data-testid="coverage-note">
+          Bilim Türkiye kataloğunda {corpusStats.entriesTotal} yayımlanmış atölye konusu var.
+          İMKÂN bunların {corpusStats.entriesAuthored} tanesi için onaylı içerik taşıyor
+          ({corpusStats.domainsCovered}/{corpusStats.domainsTotal} tema,{" "}
+          {corpusStats.cohortsCovered}/{corpusStats.cohortsTotal} yaş grubu); kalan konular için
+          pedagog onayına giren taslak öneri üretir.
+        </p>
 
         <section className="content-section" id="nasil-calisir">
           <div className="section-heading">

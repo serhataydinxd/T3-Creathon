@@ -219,3 +219,6 @@ select, input[type="number"] { width: 100%; height: 42px; border: 1px solid var(
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+/* A proposal is not an approved package: the lock card says so in its badge. */
+.verified.pending { background: #fdf3e7; border-color: #e8bd86; color: #8a5a12; }
+.coverage-note { color: var(--muted); font-size: 11px; line-height: 1.7; margin: 14px 0 0; max-width: 70ch; }

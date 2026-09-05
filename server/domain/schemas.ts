@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MATERIAL_IDS } from "@/server/content/materials";
 import { DEFAULT_OUTCOME_ID, OUTCOME_IDS } from "@/server/content/curriculum";
 import { VENUE_CAPABILITY_IDS } from "@/server/content/venues";
+import { isCatalogueEntryId } from "@/server/content/catalogue";
 import { DEFAULT_FORMAT_ID, FORMAT_IDS } from "@/server/content/formats";
 
 export const resourceProfileSchema = z.object({
@@ -31,6 +32,19 @@ export const resourceProfileSchema = z.object({
     .refine((items) => new Set(items).size === items.length, "Donanım tekrarlanamaz.")
     .default([]),
   formatId: z.enum(FORMAT_IDS).default(DEFAULT_FORMAT_ID),
+  /**
+   * A published catalogue topic with no authored session, to be drafted.
+   * Validated against the registry rather than as a free string: the id names
+   * the topic the plan locks, so an unknown one must be refused at the edge
+   * rather than resolved to a default deeper in.
+   *
+   * Optional, and omitted rather than defaulted, so a request that does not
+   * ask for a proposal hashes exactly as it did before proposals existed.
+   */
+  proposalEntryId: z
+    .string()
+    .refine(isCatalogueEntryId, "Bilinmeyen katalog konusu.")
+    .optional(),
 });
 
 /**

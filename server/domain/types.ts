@@ -30,6 +30,13 @@ export type ResourceProfile = {
   capabilities?: string[];
   /** Which Bilim Türkiye education format the session is delivered under. */
   formatId?: string;
+  /**
+   * A published catalogue topic İMKÂN has no authored session for, chosen so
+   * the assistant can draft one. Mutually exclusive with a meaningful
+   * outcomeId: when this is set the plan is a proposal awaiting pedagogue
+   * review, not an adaptation of approved content.
+   */
+  proposalEntryId?: string;
 };
 
 /** Why a route the classroom could not support was set aside. */
@@ -130,6 +137,15 @@ export type WorkshopPlan = {
   /** Bilim Türkiye workshop domain and age cohort the topic belongs to. */
   domainId?: string;
   cohort?: string;
+  /**
+   * Whether the plan adapts an authored, pedagogue-approved session or drafts
+   * a new one for a published catalogue topic nobody has written yet. Read by
+   * every counter and badge that would otherwise present a proposal as
+   * approved content.
+   */
+  topicStatus?: "authored" | "proposal";
+  /** The published catalogue entry the topic implements, when there is one. */
+  catalogueEntryId?: string | null;
   formatId?: string;
   routeId?: string;
   routeName?: string;
