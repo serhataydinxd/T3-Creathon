@@ -3,6 +3,7 @@ import { getDb } from "@/server/db/client";
 import { deliveryRecords, deliveryReports } from "@/server/db/schema";
 import type { AuthUser } from "@/server/auth/session";
 import { latestReport, recordReportTransition } from "./deliveries";
+import { publishToLibrary } from "./library";
 
 /**
  * The delivery report's lifecycle.
@@ -30,11 +31,37 @@ export type ReportNarrative = {
   learning: string;
   materials: string;
   accessibility: string;
+  /**
+   * Safety observations and incidents. A section of its own, and the reason is
+   * the whole point: it must appear in the internal report a centre reads and
+   * must never reach the public library.
+   *
+   * It was briefly folded into `accessibility`, which meant "a participant cut
+   * their finger with scissors" was published to the library the moment a
+   * manager shared the report — the exact disclosure §10 forbids.
+   */
+  safety: string;
   nextTime: string;
 };
 
 /** Every section, so a missing one is visible as missing. */
 export const NARRATIVE_SECTIONS: (keyof ReportNarrative)[] = [
+  "summary",
+  "delivery",
+  "learning",
+  "materials",
+  "accessibility",
+  "safety",
+  "nextTime",
+];
+
+/**
+ * The sections a public library entry may show.
+ *
+ * Defined as an allow-list rather than by removing `safety` from the full set,
+ * so a section added later is private until someone decides otherwise.
+ */
+export const PUBLIC_NARRATIVE_SECTIONS: (keyof ReportNarrative)[] = [
   "summary",
   "delivery",
   "learning",
@@ -53,6 +80,7 @@ export function emptyNarrative(): ReportNarrative {
     learning: NOT_STATED,
     materials: NOT_STATED,
     accessibility: NOT_STATED,
+    safety: NOT_STATED,
     nextTime: NOT_STATED,
   };
 }
@@ -196,6 +224,11 @@ export async function publishReport(user: AuthUser, deliveryId: string): Promise
   const current = await latestReport(deliveryId);
   if (!current) throw new Error("REPORT_NOT_FOUND");
   if (current.status !== "approved") throw new Error("INVALID_TRANSITION");
+
+  // Written before the status changes, so a row that cannot be published — an
+  // educator who did not agree to share, say — leaves the report approved
+  // rather than marked published with nothing behind it.
+  await publishToLibrary(deliveryId);
 
   await getDb()
     .update(deliveryReports)

@@ -41,9 +41,12 @@ export function AppShell({ children, user }: { children: React.ReactNode; user?:
           <Link className="nav-item" href="/#konu-kilidi">
             <LockKeyhole size={18} /> Konu Kilidi
           </Link>
-          <a className={`nav-item ${pathname === "/about" ? "active" : ""}`} href="/about#kaynaklar">
-            <BookOpen size={18} /> İçerik kütüphanesi
-          </a>
+          <Link
+            className={`nav-item ${pathname.startsWith("/library") ? "active" : ""}`}
+            href={user ? "/library" : "/about#kaynaklar"}
+          >
+            <BookOpen size={18} /> Etkinlik kütüphanesi
+          </Link>
         </nav>
         <div className="side-bottom">
           <div className="protocol-card">

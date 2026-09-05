@@ -490,3 +490,78 @@ export const reportTransitions = pgTable(
   },
   (table) => [index("report_transitions_idx").on(table.reportId)],
 );
+
+/**
+ * A delivery report that has been published for others to find and reuse.
+ *
+ * Denormalised on purpose. Every field the library filters on — theme, cohort,
+ * duration, budget, what the room needs — would otherwise mean digging through
+ * a jsonb plan snapshot on every query, and the filters are the whole point of
+ * the screen. The row is written once, when a manager publishes.
+ *
+ * What is deliberately absent matters as much: no safety observation, no
+ * incident detail, no free-text accessibility note, no educator name. Those
+ * are operational facts for the centre that ran the session, and a library
+ * entry is a public document.
+ */
+export const libraryEntries = pgTable(
+  "library_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deliveryId: uuid("delivery_id").notNull().references(() => deliveryRecords.id, { onDelete: "cascade" }),
+    reportId: uuid("report_id").notNull().references(() => deliveryReports.id),
+    topicId: uuid("topic_id").references(() => topics.id),
+    title: text("title").notNull(),
+    domainId: text("domain_id").notNull(),
+    cohort: text("cohort").notNull(),
+    formatId: text("format_id").notNull(),
+    centreName: text("centre_name"),
+    centreLocation: text("centre_location"),
+    deliveredOn: text("delivered_on"),
+    actualMinutes: integer("actual_minutes"),
+    actualParticipants: integer("actual_participants"),
+    actualCostTry: integer("actual_cost_try"),
+    requiresInternet: boolean("requires_internet").notNull().default(false),
+    requiresElectricity: boolean("requires_electricity").notNull().default(false),
+    /** Capability ids the delivered route needed, as a comma-free json array. */
+    requiredCapabilities: jsonb("required_capabilities").notNull().default([]),
+    /**
+     * Categorical accessibility provisions from the plan profile — never the
+     * educator's free-text note, which can describe an individual child.
+     */
+    accessibilityFeatures: jsonb("accessibility_features").notNull().default([]),
+    keyMaterials: jsonb("key_materials").notNull().default([]),
+    /** Average educator rating of the source workshop, when there is one. */
+    rating: integer("rating"),
+    adaptationCount: integer("adaptation_count").notNull().default(0),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("library_delivery_idx").on(table.deliveryId),
+    index("library_domain_idx").on(table.domainId),
+    index("library_published_idx").on(table.publishedAt),
+  ],
+);
+
+/**
+ * A workshop draft started from a library entry, for another centre.
+ *
+ * Written by the adapt-to-my-centre flow. The source version, report and
+ * centre are recorded so provenance survives, and the source is never
+ * modified — an adaptation is a new draft, not an edit.
+ */
+export const adaptationRecords = pgTable(
+  "adaptation_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    libraryEntryId: uuid("library_entry_id").notNull().references(() => libraryEntries.id, { onDelete: "cascade" }),
+    sourceVersionId: uuid("source_version_id").notNull().references(() => workshopVersions.id),
+    targetVersionId: uuid("target_version_id").references(() => workshopVersions.id),
+    targetCentreId: uuid("target_centre_id").references(() => centres.id),
+    adaptedBy: uuid("adapted_by").notNull().references(() => users.id),
+    /** What differed and why, computed rather than typed. */
+    compatibility: jsonb("compatibility").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("adaptation_entry_idx").on(table.libraryEntryId)],
+);

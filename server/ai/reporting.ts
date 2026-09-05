@@ -26,6 +26,7 @@ export const reportNarrativeSchema = z.object({
   learning: section,
   materials: section,
   accessibility: section,
+  safety: section,
   nextTime: section,
 });
 
@@ -49,7 +50,8 @@ Bölümler:
 - delivery: uygulama süreci, planlanan-gerçekleşen farkları ve aşama değişiklikleri.
 - learning: gözlenen öğrenme kanıtları; gözlenmediyse bunu açıkça yaz.
 - materials: gerçek malzeme kullanımı, alternatifler ve maliyet.
-- accessibility: erişilebilirlik uygulamaları ve güvenlik gözlemi.
+- accessibility: yalnızca erişilebilirlik uygulamaları. Güvenlik olayı YAZMA.
+- safety: güvenlik gözlemi ve varsa olay. Bu bölüm yalnızca merkez içindir; olduğu gibi yaz, yumuşatma.
 - nextTime: eğitmenin sonraki uygulama önerileri.`;
 
 export type DeliveryFacts = {
@@ -146,7 +148,7 @@ EĞİTMEN GÖZLEMLERİ:
 - Sonraki uygulama önerisi: ${value(facts.nextTime)}
 
 Şu şemada JSON döndür:
-{"summary":"string","delivery":"string","learning":"string","materials":"string","accessibility":"string","nextTime":"string"}`;
+{"summary":"string","delivery":"string","learning":"string","materials":"string","accessibility":"string","safety":"string","nextTime":"string"}`;
 }
 
 /**
@@ -198,7 +200,8 @@ export function offlineNarrative(facts: DeliveryFacts): ReportNarrative {
         ? "Malzeme değişikliği bildirilmedi."
         : `Değiştirilen malzemeler: ${substitutions.map((line) => line.materialId).join(", ")}.`
     }`,
-    accessibility: `Erişilebilirlik uygulaması: ${value(facts.accessibilityApplied)} Güvenlik gözlemi: ${value(facts.safetyObservation)}${facts.incidentOccurred ? " Bir olay bildirildi." : ""}`,
+    accessibility: `Erişilebilirlik uygulaması: ${value(facts.accessibilityApplied)}`,
+    safety: `Güvenlik gözlemi: ${value(facts.safetyObservation)}${facts.incidentOccurred ? " Bir olay bildirildi." : ""}`,
     nextTime: `${value(facts.nextTime)} En iyi çalışan bölüm: ${value(facts.whatWorked)} Zorlanılan bölüm: ${value(facts.whatWasHard)}`,
   };
 }

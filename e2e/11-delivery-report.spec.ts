@@ -32,6 +32,9 @@ test("a published workshop becomes a reviewed, published delivery report", async
   await page.getByTestId("input-participants").fill("21");
   await page.getByTestId("input-minutes").fill("55");
   await page.getByTestId("input-worked").fill("Gruplar modeli beklenenden hızlı kurdu.");
+  // Publication needs the educator's permission, so granting it is part of
+  // the flow rather than something a manager can decide alone.
+  await page.getByTestId("visibility-select").selectOption("public");
   await page.getByTestId("stage-outcome-evaluate").selectOption("skipped");
   await page.getByTestId("stage-note-evaluate").fill("Süre yetmedi.");
   await page.getByTestId("save-observations").click();

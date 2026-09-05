@@ -38,7 +38,7 @@ export const PUBLIC_ROUTES = ["/", "/about"] as const;
 export const UNINDEXED_PUBLIC_ROUTES = ["/login", "/register"] as const;
 
 /** Behind authentication. Never crawled, never listed. */
-export const PRIVATE_ROUTES = ["/dashboard", "/lab", "/workshops", "/print", "/centres", "/deliveries", "/api"] as const;
+export const PRIVATE_ROUTES = ["/dashboard", "/lab", "/workshops", "/print", "/centres", "/deliveries", "/library", "/api"] as const;
 
 export function resolveSiteUrl(
   env: Readonly<Record<string, string | undefined>> = process.env,

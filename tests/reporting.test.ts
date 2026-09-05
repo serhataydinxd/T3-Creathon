@@ -128,8 +128,11 @@ describe("the offline narrative", () => {
     const narrative = offlineNarrative(
       facts({ incidentOccurred: true, safetyObservation: "Bir katılımcı parmağını kesti." }),
     );
-    expect(narrative.accessibility).toContain("parmağını kesti");
-    expect(narrative.accessibility).toContain("olay bildirildi");
+    // In its own section, which the public library never renders — reported
+    // in full to the centre, and to nobody else.
+    expect(narrative.safety).toContain("parmağını kesti");
+    expect(narrative.safety).toContain("olay bildirildi");
+    expect(narrative.accessibility).not.toContain("parmağını kesti");
   });
 
   it("says 'Belirtilmedi' for what was never entered", () => {

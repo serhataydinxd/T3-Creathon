@@ -27,7 +27,8 @@ const SECTION_LABEL: Record<keyof ReportNarrative, string> = {
   delivery: "Uygulama süreci",
   learning: "Öğrenme kanıtları",
   materials: "Malzeme ve maliyet",
-  accessibility: "Erişilebilirlik ve güvenlik",
+  accessibility: "Erişilebilirlik",
+  safety: "Güvenlik ve olay kaydı (merkez içi)",
   nextTime: "Sonraki uygulama",
 };
 
@@ -65,7 +66,17 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
     report?.status === "submitted" &&
     delivery.record.educatorId !== user.id &&
     report.createdBy !== user.id;
-  const canPublish = user.role === "manager" && report?.status === "approved";
+  // Sharing is the educator's decision, so a manager cannot publish a report
+  // its author kept private. The server refuses it either way; offering the
+  // button and then erroring would be a worse way to say the same thing.
+  const canPublish =
+    user.role === "manager" &&
+    report?.status === "approved" &&
+    delivery.record.visibility === "public";
+  const blockedByVisibility =
+    user.role === "manager" &&
+    report?.status === "approved" &&
+    delivery.record.visibility !== "public";
 
   return (
     <AppShell user={user}>
@@ -257,6 +268,13 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
                   Onayla
                 </button>
               </form>
+            )}
+            {blockedByVisibility && (
+              <p className="panel-help" data-testid="sharing-blocked">
+                Bu rapor kütüphanede yayımlanamaz: uygulayan eğitmen paylaşımı
+                &quot;{delivery.record.visibility === "private" ? "yalnızca ben" : "merkezim"}&quot;
+                olarak işaretlemiş. Paylaşım kararı eğitmene aittir.
+              </p>
             )}
             {canPublish && (
               <form action={publishReportAction}>

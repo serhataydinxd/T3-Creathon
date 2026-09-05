@@ -158,6 +158,7 @@ export async function editReportAction(formData: FormData) {
       learning: z.string().trim().min(1).max(900),
       materials: z.string().trim().min(1).max(900),
       accessibility: z.string().trim().min(1).max(900),
+      safety: z.string().trim().min(1).max(900),
       nextTime: z.string().trim().min(1).max(900),
     })
     .parse({
@@ -166,6 +167,7 @@ export async function editReportAction(formData: FormData) {
       learning: formData.get("learning"),
       materials: formData.get("materials"),
       accessibility: formData.get("accessibility"),
+      safety: formData.get("safety"),
       nextTime: formData.get("nextTime"),
     }) satisfies ReportNarrative;
   // An edited report is the educator's text, so its provenance is no longer
