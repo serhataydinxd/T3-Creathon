@@ -16,7 +16,7 @@ import type { ResourceProfile, WorkshopPlan } from "./types";
 
 import { loadGenerationRecord } from "@/server/ai/generation-record";
 import { resolveProposalEntryId, resolveTopic } from "./generator";
-import { requireTopicRowId } from "./outcome-store";
+import { requireTopicRowId, resolveOutcomeRowId } from "./topic-store";
 
 export type WorkshopRecord = {
   id: string;
@@ -65,14 +65,18 @@ export async function createDraft(
     // The plan records which topic produced it, so the version is linked to
     // that one rather than to whichever happened to be first. A proposal links
     // to its published catalogue topic; an adaptation to its corpus outcome.
-    const objectiveId = await requireTopicRowId(tx, {
+    const selection = {
       outcomeId: resolveTopic(profile).outcomeId,
       proposalEntryId: resolveProposalEntryId(profile),
-    });
+    };
+    const topicId = await requireTopicRowId(tx, selection);
+    // Null whenever the topic has no curriculum mapping, which is the normal
+    // case: a published catalogue topic is not a learning outcome.
+    const objectiveId = await resolveOutcomeRowId(tx, selection);
 
     const [insertedRun] = await tx
       .insert(generationRuns)
-      .values({ objectiveId, requestedBy: user.id, idempotencyKey, requestHash, mode: plan.mode === "LIVE" ? "live" : "replay", status: "ready_for_review", request: profile, objectiveSnapshot: plan.objective })
+      .values({ topicId, objectiveId, requestedBy: user.id, idempotencyKey, requestHash, mode: plan.mode === "LIVE" ? "live" : "replay", status: "ready_for_review", request: profile, objectiveSnapshot: plan.objective })
       .onConflictDoNothing({ target: [generationRuns.requestedBy, generationRuns.idempotencyKey] })
       .returning({ id: generationRuns.id });
     if (!insertedRun) {

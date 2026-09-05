@@ -250,8 +250,9 @@ describe("drafting a session for an unauthored catalogue topic", () => {
 describe("release-time seeding", () => {
   const release = readFileSync(new URL("../scripts/seed-objective.ts", import.meta.url), "utf8");
 
-  it("syncs the published catalogue, not just the approved outcomes", () => {
-    expect(release).toContain("syncCatalogueTopics");
+  it("syncs topics and their mappings, not just the approved outcomes", () => {
+    expect(release).toContain("syncTopics");
+    expect(release).toContain("syncTopicOutcomeMappings");
     expect(release).toContain("syncOutcomes");
   });
 

@@ -67,6 +67,22 @@ export const sessions = pgTable(
   ],
 );
 
+/**
+ * What a row in `objectives` is for.
+ *
+ * The table originally held two unrelated things: real MEB learning outcomes,
+ * and synthetic `BT.*` rows standing in for published catalogue topics so a
+ * proposal draft had something to reference. Those are different concepts —
+ * a workshop topic is the product's identity, a curriculum outcome is an
+ * optional mapping onto it — and conflating them is what let a catalogue topic
+ * be persisted as though it were an approved curriculum outcome.
+ *
+ * Topics now live in `topics`. The legacy rows stay, marked, because existing
+ * generation_runs reference them by foreign key and deleting them would break
+ * packages that are already saved.
+ */
+export const objectiveKind = pgEnum("objective_kind", ["meb_outcome", "legacy_catalogue_topic"]);
+
 export const objectives = pgTable("objectives", {
   id: uuid("id").primaryKey().defaultRandom(),
   code: text("code").notNull(),
@@ -74,14 +90,80 @@ export const objectives = pgTable("objectives", {
   sourceUrl: text("source_url").notNull(),
   contentHash: text("content_hash").notNull().unique(),
   approved: boolean("approved").notNull().default(false),
+  kind: objectiveKind("kind").notNull().default("meb_outcome"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Where a topic's identity comes from. */
+export const topicSource = pgEnum("topic_source", ["catalogue", "imkan"]);
+
+/**
+ * A Bilim Türkiye workshop topic: theme, cohort and title. This is the
+ * product's identity, independent of any curriculum mapping.
+ *
+ * Most rows mirror a published catalogue entry. A few are İMKÂN-authored
+ * topics the catalogue lists no counterpart for, which is why `source` exists
+ * rather than being implied by a null catalogue id.
+ */
+export const topics = pgTable("topics", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /** Catalogue entry id, or `imkan:<outcomeId>` for an unlisted topic. */
+  slug: text("slug").notNull().unique(),
+  source: topicSource("source").notNull(),
+  catalogueEntryId: text("catalogue_entry_id"),
+  /** The corpus key when İMKÂN has authored a session for this topic. */
+  outcomeId: text("outcome_id"),
+  domainId: text("domain_id").notNull(),
+  cohort: text("cohort").notNull(),
+  title: text("title").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * An optional mapping from a workshop topic onto an official curriculum
+ * outcome.
+ *
+ * Separate from both tables because it is a claim *about* the pair, and it
+ * carries its own verification state: who checked it against the source
+ * document and when. Until someone has, the interface must say no verified
+ * mapping exists rather than presenting the code as official.
+ */
+export const topicOutcomeMappings = pgTable(
+  "topic_outcome_mappings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    topicId: uuid("topic_id").notNull().references(() => topics.id),
+    objectiveId: uuid("objective_id").notNull().references(() => objectives.id),
+    /**
+     * Whether a human has checked this code and wording against the source
+     * document. False is the honest default: a mapping transcribed from a unit
+     * page is a claim awaiting verification, not an approved fact.
+     */
+    verified: boolean("verified").notNull().default(false),
+    verifiedBy: uuid("verified_by").references(() => users.id),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    sourceReference: text("source_reference"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("topic_outcome_idx").on(table.topicId, table.objectiveId)],
+);
 
 export const generationRuns = pgTable(
   "generation_runs",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    objectiveId: uuid("objective_id").notNull().references(() => objectives.id),
+    /**
+     * The workshop topic this run produced a plan for. Nullable only so runs
+     * saved before topics existed still read; every new run sets it.
+     */
+    topicId: uuid("topic_id").references(() => topics.id),
+    /**
+     * Kept for the runs that predate the split, and set going forward only
+     * when the topic has a curriculum mapping. Nullable now because a
+     * catalogue topic legitimately has no learning outcome behind it.
+     */
+    objectiveId: uuid("objective_id").references(() => objectives.id),
     requestedBy: uuid("requested_by").notNull().references(() => users.id),
     idempotencyKey: text("idempotency_key").notNull(),
     requestHash: text("request_hash").notNull(),

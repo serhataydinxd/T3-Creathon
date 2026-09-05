@@ -3,7 +3,8 @@ import "dotenv/config";
 import { hashPassword } from "../server/auth/password";
 import { closeDatabase, getDb } from "../server/db/client";
 import { users } from "../server/db/schema";
-import { syncCatalogueTopics, syncOutcomes } from "../server/domain/outcome-store";
+import { syncOutcomes } from "../server/domain/outcome-store";
+import { syncTopicOutcomeMappings, syncTopics } from "../server/domain/topic-store";
 
 const demoPassword = process.env.DEMO_PASSWORD ?? "I.mkanDemo!2026";
 const passwordHash = await hashPassword(demoPassword);
@@ -26,10 +27,11 @@ for (const seedUser of seedUsers) {
 }
 
 const codes = await syncOutcomes();
-// Published catalogue topics too, so a draft proposed for one can be saved.
-const catalogueTopics = await syncCatalogueTopics();
+// Topics too, so a draft for any published catalogue topic can be saved.
+const catalogueTopics = await syncTopics();
+await syncTopicOutcomeMappings();
 
 await closeDatabase();
 console.info(
-  `Seeded ${seedUsers.length} role accounts, ${codes.length} approved outcome(s) and ${catalogueTopics} catalogue topic(s).`,
+  `Seeded ${seedUsers.length} role accounts, ${codes.length} approved outcome(s) and ${catalogueTopics} workshop topic(s).`,
 );
