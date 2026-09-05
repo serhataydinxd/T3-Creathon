@@ -236,17 +236,24 @@ select, input[type="number"] { width: 100%; height: 42px; border: 1px solid var(
 .capability-choice .chip { border: 1px solid var(--line); background: white; border-radius: 6px; padding: 4px 9px; font-size: 10px; color: var(--muted); cursor: pointer; }
 .capability-choice .chip.selected { border-color: #9fcbb8; background: #f0f8f4; color: var(--green-dark); font-weight: 600; }
 .verified.neutral { background: #eef1f4; border-color: #cfd6dd; color: #4a5560; }
-/* Why each route was or was not used. Computed since the first version of the
-   generator; shown since the three-state model made its absence misleading. */
+/* Every route the topic offers, with the reasoning behind each verdict.
+   Computed since the first generator; shown since presenting only the winner
+   made the product look like it had decided rather than applied rules. */
 .route-decisions { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; background: var(--panel); }
-.route-decisions ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.route-decisions ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 12px; }
 .route-decisions li { display: grid; grid-template-columns: 16px 1fr; gap: 9px; align-items: start; font-size: 11px; }
-.route-decisions li svg { width: 14px; height: 14px; margin-top: 2px; }
-.route-decisions strong { display: block; font-size: 11px; }
-.route-decisions small { color: var(--muted); line-height: 1.55; }
-.route-decisions .chosen svg { color: var(--green); }
-.route-decisions .uncertain svg { color: #a8730f; }
-.route-decisions .rejected svg { color: #8a3a3a; }
+.route-decisions li > svg { width: 14px; height: 14px; margin-top: 2px; }
+.route-decisions strong { display: flex; align-items: baseline; gap: 7px; font-size: 11px; flex-wrap: wrap; }
+.route-decisions small { display: block; color: var(--muted); line-height: 1.55; margin-top: 2px; }
+.candidate-status { display: inline-block; font: 600 9px var(--font-mono); letter-spacing: .04em; text-transform: uppercase; margin-top: 3px; }
+.candidate-chosen { flex-shrink: 0; font: 600 8px var(--font-mono); text-transform: uppercase; letter-spacing: .05em; background: var(--green); color: white; border-radius: 999px; padding: 2px 7px; }
+.candidate-cost { font-family: var(--font-mono); font-size: 10px; }
+.candidate-safety { display: flex; align-items: flex-start; gap: 5px; color: #8a5a12; }
+.candidate-safety svg { width: 11px; height: 11px; margin-top: 3px; flex-shrink: 0; }
+.route-decisions .ready > svg, .route-decisions .ready .candidate-status { color: var(--green); }
+.route-decisions .adaptable > svg, .route-decisions .adaptable .candidate-status { color: #a8730f; }
+.route-decisions .uncertain > svg, .route-decisions .uncertain .candidate-status { color: #7a5a13; }
+.route-decisions .blocked > svg, .route-decisions .blocked .candidate-status { color: #8a3a3a; }
 /* Centre facility record. Status leads each row because "who says so" is the
    question a trainer is actually asking of this screen. */
 .centre-list { display: grid; gap: 14px; }

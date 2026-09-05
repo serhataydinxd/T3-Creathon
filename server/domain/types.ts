@@ -1,4 +1,5 @@
 import type { MaterialId } from "@/server/content/materials";
+import type { RouteCandidate } from "./candidates";
 
 /**
  * Kept as an alias so the registry stays the one place materials are declared.
@@ -200,6 +201,11 @@ export type WorkshopPlan = {
    * information as a verified absence.
    */
   uncertainRoutes?: RouteUncertainty[];
+  /**
+   * Every route the topic offers, ranked with the reasons behind each verdict.
+   * Optional so packages saved before candidates existed still render.
+   */
+  candidates?: RouteCandidate[];
   /**
    * Stamped so a generation record issued before a deploy can be recognised as
    * predating the current generator rather than silently reused.

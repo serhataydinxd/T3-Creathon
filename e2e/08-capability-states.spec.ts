@@ -29,7 +29,11 @@ test("an unpublished facility leaves a route uncertain rather than rejected", as
 
   // Missing information reported as missing information, not as absence.
   await expect(page.locator('[data-code="CAPABILITY_STATUS_UNKNOWN"]')).toBeVisible();
-  await expect(page.locator('[data-code="MISSING_CAPABILITY"]')).toHaveCount(0);
+  // Unsettled, not ruled out: the distinction the three-state model exists for.
+  await expect(page.getByTestId("candidate-space-age-planetarium")).toHaveAttribute(
+    "data-status",
+    "uncertain",
+  );
 });
 
 test("verifying the facility is absent turns uncertainty into a rejection", async ({ page }) => {
@@ -46,7 +50,12 @@ test("verifying the facility is absent turns uncertainty into a rejection", asyn
   await page.getByTestId("generate-submit").click();
   await expect(page.getByTestId("plan-root")).toBeVisible();
 
-  await expect(page.locator('[data-code="MISSING_CAPABILITY"]')).toBeVisible();
+  // The dome route is now ruled out rather than merely unsettled, and the
+  // candidate list says which of the two it is.
+  await expect(page.getByTestId("candidate-space-age-planetarium")).toHaveAttribute(
+    "data-status",
+    "blocked",
+  );
   await expect(page.locator('[data-code="CAPABILITY_STATUS_UNKNOWN"]')).toHaveCount(0);
 });
 

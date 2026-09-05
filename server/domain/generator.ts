@@ -7,12 +7,13 @@ import {
 } from "@/server/content/curriculum";
 import { isCatalogueEntryId } from "@/server/content/catalogue";
 import { buildProposalTopic, proposalSource } from "@/server/content/proposals";
-import { MATERIALS, MATERIALS_PRICED_ON } from "@/server/content/materials";
 import { WORKSHOP_DOMAINS } from "@/server/content/domains";
 import { DEFAULT_FORMAT_ID, getFormat } from "@/server/content/formats";
 import { SCHOOL_CLASSROOM } from "@/server/content/venues";
 import { buildStagesForTopic, selectRouteForTopic } from "./routes";
-import type { Finding, MaterialLine, ResourceProfile, WorkshopPlan } from "./types";
+import { buildCandidates } from "./candidates";
+import { costRoute } from "./costing";
+import type { Finding, ResourceProfile, WorkshopPlan } from "./types";
 
 /**
  * Bumped whenever the deterministic output of this module changes in a way
@@ -99,46 +100,8 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
   const { topic: content, status: topicStatus, outcomeId } = resolveTopic(profile);
   const { route, rejected, uncertain } = selectRouteForTopic(content, profile);
   const stages = buildStagesForTopic(content, route, profile);
-  const groupCount = Math.ceil(profile.classSize / profile.groupSize);
-
-  const round = (value: number) => Math.round(value * 100) / 100;
-  const inventory = new Set(profile.materials);
-  const materialPlan: MaterialLine[] = route.materials.map(({ materialId, basis, quantity }) => {
-    const material = MATERIALS[materialId];
-    const perGroup = basis === "student" ? quantity * profile.groupSize : quantity;
-    // What the teacher told us they have, not what a typical classroom stocks.
-    const inInventory = inventory.has(materialId);
-    const totalCostTry = round(material.unitCostTry * perGroup * groupCount);
-    return {
-      key: materialId,
-      label: material.label,
-      category: material.category,
-      kind: material.kind,
-      basis,
-      quantityPerUnit: quantity,
-      quantityPerGroup: round(perGroup),
-      // Shared consumables such as tape are fractional per group, so the class
-      // total is rounded rather than truncated away to nothing.
-      totalQuantity: round(perGroup * groupCount),
-      unitCostTry: material.unitCostTry,
-      totalCostTry,
-      inInventory,
-      // Two different questions, so the figures deliberately overlap: a
-      // consumable the teacher does not own is both bought and used up.
-      acquisitionCostTry: inInventory ? 0 : totalCostTry,
-      lessonCostTry: material.kind === "consumable" ? totalCostTry : 0,
-    };
-  });
-
-  const estimatedCostTry = Math.ceil(
-    materialPlan.reduce((sum, line) => sum + line.totalCostTry, 0),
-  );
-  const costs = {
-    totalTry: estimatedCostTry,
-    acquisitionTry: Math.ceil(materialPlan.reduce((sum, line) => sum + line.acquisitionCostTry, 0)),
-    lessonTry: Math.ceil(materialPlan.reduce((sum, line) => sum + line.lessonCostTry, 0)),
-    pricedOn: MATERIALS_PRICED_ON,
-  };
+  const { materialPlan, costs, groupCount } = costRoute(route, profile);
+  const estimatedCostTry = costs.totalTry;
 
   // The format's own published requirement, before the content's.
   if (format.requiresInternet && !profile.hasInternet) {
@@ -247,6 +210,7 @@ export function generateWorkshop(profile: ResourceProfile): WorkshopPlan {
     routeTier: route.tier,
     rejectedRoutes: rejected,
     uncertainRoutes: uncertain,
+    candidates: buildCandidates(content, profile),
     generatorVersion: GENERATOR_VERSION,
     groupCount,
     estimatedCostTry,
